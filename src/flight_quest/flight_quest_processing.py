@@ -198,7 +198,7 @@ if __name__ == '__main__':
     num_negative = 0
     i = 0
     pool_queue = []
-    pool = Pool(processes=8)
+    pool = Pool(processes=1)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
         print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))

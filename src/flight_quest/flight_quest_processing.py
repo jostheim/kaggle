@@ -203,7 +203,7 @@ if __name__ == '__main__':
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
         print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
-        output_file_name = subdirname + sys.argv[2] + ".tab"
+        output_file_name = subdirname + "_" + sys.argv[2] + ".tab"
         if kind == "bayesian":
             output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:

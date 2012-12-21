@@ -55,9 +55,8 @@ def parse_date_time(val):
 #22 scheduled_aircraft_type              22258  non-null values
 #23 actual_aircraft_type                 0  non-null values
 #24 icao_aircraft_type_actual            23692  non-null values
-def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, header, clazz=None):
+def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, header, output_file, clazz=None, ):
     num = 0
-    data = ""
     # build up a list for each row of the rows that come before it in time, we are going to flatten those
     unique_cols =  {}
     series = df['actual_gate_departure'].dropna()
@@ -65,6 +64,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
     k = 0
     row_cache = {}
     for i in random.sample(series.index, biggest):
+        data = ""
         print "working on {0}/{1}".format(k, biggest)
         initial_gate_departure = df.ix[i]['actual_gate_departure']
         if df.ix[i]['actual_gate_departure'] is not None:
@@ -160,59 +160,61 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
             data += " ".join(svm_row) + "\n"
         else:
             data += ",".join(svm_row) + "\n"
+        output_file.write(data)
     
-    return data, num
+    return num
 
-def process_flight_history_file(kind, filename, output, do_header=False):
+def process_flight_history_file(kind, filename, output_file_name, do_header=False):
     df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_differences'] = runway_arrival_difference
     df_late = df[df['runway_arrival_differences'] > datetime.timedelta(0, 0, 0)]
     df_ontime = df[df['runway_arrival_differences'] <= datetime.timedelta(0, 0, 0)]
-    data = ""
     biggest = len(df_late.values)
     if len(df_ontime.values) < biggest:
         biggest = len(df_ontime.values)
     header = []
+    output_file = open(output_file_name, 'w')
     if kind == "svm":
         ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-        data, num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, clazz="-1")
-        data_t, num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, clazz="+1")
+        num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file, clazz="-1" )
+        num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file, clazz="+1")
     else:
         ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
-        data, num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header)
-        data_t, num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header)
-    return data+data_t, num_negative, num_positive
+        num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, output_file, header)
+        num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, output_file, header)
+    output_file.close()
+    return num_negative, num_positive
 
 def process_flight_history_file_proxy(args):
     kind = args[0]
     filename = args[1]
-    output = args[2]
-    do_header = args[3]
-    return process_flight_history_file(kind, filename, output, do_header)
+    do_header = args[2]
+    output_file_name = args[3]
+    return process_flight_history_file(kind, filename, output_file_name, do_header)
  
 if __name__ == '__main__':
     kind = sys.argv[1]
-    f = open(sys.argv[2], 'w')
     num_positive = 0
     num_negative = 0
     i = 0
     pool_queue = []
-    pool = Pool(processes=1)
+    pool = Pool(processes=8)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
         print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
+        output_file_name = subdirname + sys.argv[2] + ".tab"
+        if kind == "bayesian":
+            output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, True])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = True)
+            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), True, output_file_name])
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), do_header = True)
         else:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, False])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = False)
+            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), False, output_file_name])
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), do_header = False)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
-    for data, num_negative_tmp, num_positive_tmp in result:
-        f.write(data)
+    for num_negative_tmp, num_positive_tmp in result:
         num_positive += num_positive_tmp
         num_negative += num_negative_tmp
     print "num_positive: {0}, num_negative: {1}".format(num_positive, num_negative)
-    f.close()

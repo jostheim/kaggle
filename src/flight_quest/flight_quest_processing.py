@@ -204,10 +204,10 @@ if __name__ == '__main__':
         print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
         if i == 0:
             pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, True])
-            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = True)
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = True)
         else:
             pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, False])
-            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = False)
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), f, do_header = False)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
     for data, num_negative_tmp, num_positive_tmp in result:

@@ -78,7 +78,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
         if kind == "svm" and clazz is not None:
             svm_row.append("{0}".format(clazz))
         # loop through all the rows in the previous flights
-        for ii, row in enumerate(df_tmp.values[0:100]):
+        for ii, row in enumerate(df_tmp.values[0:50]):
             if ii in row_cache:
                 svm_row = row_cache[ii]
             for n, val in enumerate(row):

@@ -147,7 +147,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                     if kind == "svm":
                         svm_row.append("{0}:{1}".format(j, diff.seconds))
                     else:
-                        svm_row.append("{2}_{1}_gate_time_difference:{0}".format(diff, df.columns[n]), j)
+                        svm_row.append("{2}_{1}_gate_time_difference:{0}".format(diff, df.columns[n], j))
                     j += 1
 #                    print val
 
@@ -181,16 +181,16 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
         num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file, clazz="+1")
     else:
         ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
-        num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, output_file, header)
-        num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, output_file, header)
+        num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file)
+        num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file)
     output_file.close()
     return num_negative, num_positive
 
 def process_flight_history_file_proxy(args):
     kind = args[0]
     filename = args[1]
-    do_header = args[2]
-    output_file_name = args[3]
+    do_header = args[3]
+    output_file_name = args[2]
     return process_flight_history_file(kind, filename, output_file_name, do_header)
  
 if __name__ == '__main__':
@@ -207,11 +207,11 @@ if __name__ == '__main__':
         if kind == "bayesian":
             output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), True, output_file_name])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), do_header = True)
+            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
+            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
         else:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), False, output_file_name])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), do_header = False)
+#            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, False])
+            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
     for num_negative_tmp, num_positive_tmp in result:

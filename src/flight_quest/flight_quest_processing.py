@@ -90,27 +90,27 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.weekday()))
                             else:
-                                svm_row.append("{2}_{1}_weekday:{0}".format(val.weekday(), df.columns[n], j))
+                                svm_row.append("{0}".format(val.weekday()))
                             j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.day))
                             else:
-                                svm_row.append("{2}_{1}_day:{0}".format(val.day, df.columns[n], j))
+                                svm_row.append("{0}".format(val.day))
                             j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.hour))
                             else:
-                                svm_row.append("{2}_{1}_hour:{0}".format(val.hour, df.columns[n], j))
+                                svm_row.append("{0}".format(val.hour))
                             j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.minute))
                             else:
-                                svm_row.append("{2}_{1}_minute:{0}".format(val.minute, df.columns[n], j))
+                                svm_row.append("{0}".format(val.minute))
                             j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.second))
                             else:
-                                svm_row.append("{2}_{1}_second:{0}".format(val.second, df.columns[n], j))
+                                svm_row.append("{0}".format(val.second))
                             j += 1
                         else:
                             if ii == 0 and kind == "bayesian" and do_header:
@@ -134,7 +134,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                                 svm_row.append("{0}:{1}".format(j, val_tmp))
                                 j += 1
                             else:
-                                svm_row.append("{2}_{0}:{1}".format(df.columns[n], val, j))
+                                svm_row.append("{0}".format(val))
                                 j += 1
                         row_cache[ii] = svm_row 
                     elif ii == 0 and kind == "bayesian" and do_header and df.columns[n] not in ignored_columns:
@@ -147,7 +147,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                     if kind == "svm":
                         svm_row.append("{0}:{1}".format(j, diff.seconds))
                     else:
-                        svm_row.append("{2}_{1}_gate_time_difference:{0}".format(diff, df.columns[n], j))
+                        svm_row.append("{0}".format(diff))
                     j += 1
 #                    print val
 

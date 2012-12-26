@@ -63,6 +63,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
     df = df.ix[series.index]
     k = 0
     row_cache = {}
+    MAX_NUMBER = 50
     for i in random.sample(series.index, biggest):
         data = ""
         print "working on {0}/{1}".format(k, biggest)
@@ -78,11 +79,13 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
         if kind == "svm" and clazz is not None:
             svm_row.append("{0}".format(clazz))
         # loop through all the rows in the previous flights
-        for ii, row in enumerate(df_tmp.values[0:50]):
+        for ii, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
+            cache = False
             if ii in row_cache:
                 svm_row = row_cache[ii]
+                cache = True
             for n, val in enumerate(row):
-                if ii not in row_cache:
+                if not cache:
                     if df.columns[n] not in ignored_columns and str(val) != "nan" and val is not None:
                         if type(val) is datetime.datetime:
                             if ii == 0 and kind == "bayesian" and do_header:
@@ -165,7 +168,7 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
     return num
 
 def process_flight_history_file(kind, filename, output_file_name, do_header=False):
-    df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+    df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_differences'] = runway_arrival_difference
     df_late = df[df['runway_arrival_differences'] > datetime.timedelta(0, 0, 0)]
@@ -175,12 +178,13 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
         biggest = len(df_ontime.values)
     header = []
     output_file = open(output_file_name, 'w')
+    ignored_columns = []
     if kind == "svm":
-        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
+#        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
         num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file, clazz="-1" )
         num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file, clazz="+1")
     else:
-        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
+#        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
         num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file)
         num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file)
     output_file.close()
@@ -207,11 +211,11 @@ if __name__ == '__main__':
         if kind == "bayesian":
             output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
+#            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
+            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
         else:
-            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, False])
-#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
+#            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, True])
+            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
     for num_negative_tmp, num_positive_tmp in result:

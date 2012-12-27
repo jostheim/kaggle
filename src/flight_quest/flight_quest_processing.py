@@ -146,11 +146,11 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                     elif k == 0 and kind == "bayesian" and do_header and df.columns[n] not in ignored_columns:
                         header.append("{0}_{1}".format(j, df.columns[n]))
                 if df.columns[n] == 'actual_gate_departure':
-                    if k == 0 and kind == "bayesian" and do_header:
+                    if kind == "bayesian" and do_header:
                         header.append("{0}_gate_time_difference".format(j))
-                    diff = initial_gate_departure - val
+                    diff = minutes_difference(initial_gate_departure, val)
                     if kind == "svm":
-                        svm_row.append("{0}:{1}".format(j, minutes_difference(initial_gate_departure, val)))
+                        svm_row.append("{0}:{1}".format(j, diff))
                         j += 1
                     else:
                         svm_row.append("{0}".format(diff))

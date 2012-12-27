@@ -154,15 +154,16 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                     j += 1
 #                    print val
 
-        k += 1
+        
         
         num += 1
-        if i == 0 and kind == "bayesian" and do_header:
+        if k == 0 and kind == "bayesian" and do_header:
             data += "%" + ",".join(header) + "\n"
         if kind == "svm":
             data += " ".join(svm_row) + "\n"
         else:
             data += ",".join(svm_row) + "\n"
+        k += 1
         output_file.write(data)
     
     return num

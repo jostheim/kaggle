@@ -18,6 +18,10 @@ data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
 #data_transform_dict = {'published_departure':np.float64}
 
+def minutes_difference(datetime1, datetime2):
+    diff = datetime1 - datetime2
+    return diff.days*24*60+diff.seconds/60
+
 def parse_date_time(val):
     if str(val).lower().strip() != "MISSING" and str(val).lower().strip() != "nan":
         #'2012-11-12 17:30:00+00:00
@@ -88,35 +92,35 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                 if not cache:
                     if df.columns[n] not in ignored_columns and str(val) != "nan" and val is not None:
                         if type(val) is datetime.datetime:
-                            if ii == 0 and kind == "bayesian" and do_header:
+                            if k == 0 and kind == "bayesian" and do_header:
                                 header += ["{0}_weekday".format(j), "{0}_day".format(j), "{0}_hour".format(j), "{0}_minute".format(j), "{0}_second".format(j)]
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.weekday()))
+                                j += 1
                             else:
                                 svm_row.append("{0}".format(val.weekday()))
-                            j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.day))
+                                j += 1
                             else:
                                 svm_row.append("{0}".format(val.day))
-                            j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.hour))
+                                j += 1
                             else:
                                 svm_row.append("{0}".format(val.hour))
-                            j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.minute))
+                                j += 1
                             else:
                                 svm_row.append("{0}".format(val.minute))
-                            j += 1
                             if kind == "svm":
                                 svm_row.append("{0}:{1}".format(j, val.second))
+                                j += 1
                             else:
                                 svm_row.append("{0}".format(val.second))
-                            j += 1
                         else:
-                            if ii == 0 and kind == "bayesian" and do_header:
+                            if k == 0 and kind == "bayesian" and do_header:
                                 header.append("{0}_{1}".format(j, df.columns[n]))
                             if kind == "svm":
                                 val_tmp = val 
@@ -138,20 +142,21 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                                 j += 1
                             else:
                                 svm_row.append("{0}".format(val))
-                                j += 1
                         row_cache[ii] = svm_row 
-                    elif ii == 0 and kind == "bayesian" and do_header and df.columns[n] not in ignored_columns:
+                    elif k == 0 and kind == "bayesian" and do_header and df.columns[n] not in ignored_columns:
                         header.append("{0}_{1}".format(j, df.columns[n]))
-                        j += 1
                 if df.columns[n] == 'actual_gate_departure':
-                    if ii == 0 and kind == "bayesian" and do_header:
-                        header.append("gate_time_difference")
+                    if k == 0 and kind == "bayesian" and do_header:
+                        header.append("{0}_gate_time_difference".format(j))
                     diff = initial_gate_departure - val
                     if kind == "svm":
-                        svm_row.append("{0}:{1}".format(j, diff.seconds))
+                        svm_row.append("{0}:{1}".format(j, minutes_difference(initial_gate_departure, val)))
+                        j += 1
                     else:
                         svm_row.append("{0}".format(diff))
-                    j += 1
+            if kind == "bayesian":
+                j += 1
+
 #                    print val
 
         

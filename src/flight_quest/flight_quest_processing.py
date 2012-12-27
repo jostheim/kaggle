@@ -68,6 +68,8 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
     k = 0
     row_cache = {}
     MAX_NUMBER = 50
+    if biggest is None:
+        biggest = len(series)
     for i in random.sample(series.index, biggest):
         data = ""
         print "working on {0}/{1}".format(k, biggest)
@@ -182,6 +184,8 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
     biggest = len(df_late.values)
     if len(df_ontime.values) < biggest:
         biggest = len(df_ontime.values)
+    if kind == "bayesian":
+        biggest = None
     header = []
     output_file = open(output_file_name, 'w')
     ignored_columns = []

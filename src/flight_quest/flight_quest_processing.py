@@ -158,11 +158,6 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
                         svm_row.append("{0}".format(diff))
             if kind == "bayesian":
                 column_count += 1
-
-#                    print val
-
-        
-        
         num += 1
         if line_count == 0 and kind == "bayesian" and do_header:
             data += "%" + ",".join(header) + "\n"
@@ -187,15 +182,18 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
     if kind == "bayesian":
         biggest = None
     header = []
-    output_file = open(output_file_name, 'w')
     ignored_columns = []
     if kind == "svm":
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
+        output_file = open(output_file_name+"_positive", 'w')
         num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file, clazz="-1" )
+        output_file = open(output_file_name+"_negative", 'w')
         num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file, clazz="+1")
     else:
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
+        output_file = open(output_file_name+"_positive", 'w')
         num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file)
+        output_file = open(output_file_name+"_negative", 'w')
         num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file)
     output_file.close()
     return num_negative, num_positive

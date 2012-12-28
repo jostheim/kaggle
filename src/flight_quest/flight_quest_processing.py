@@ -165,11 +165,11 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
         
         num += 1
         if line_count == 0 and kind == "bayesian" and do_header:
-            data += "%" + ",".join(header) + "\column"
+            data += "%" + ",".join(header) + "\n"
         if kind == "svm":
-            data += " ".join(svm_row) + "\column"
+            data += " ".join(svm_row) + "\n"
         else:
-            data += ",".join(svm_row) + "\column"
+            data += ",".join(svm_row) + "\n"
         line_count += 1
         output_file.write(data)
     

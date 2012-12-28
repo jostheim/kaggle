@@ -65,14 +65,14 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
     unique_cols =  {}
     series = df['actual_gate_departure'].dropna()
     df = df.ix[series.index]
-    k = 0
+    line_count = 0
     row_cache = {}
     MAX_NUMBER = 50
     if biggest is None:
         biggest = len(series)
     for i in random.sample(series.index, biggest):
         data = ""
-        print "working on {0}/{1}".format(k, biggest)
+        print "working on {0}/{1}".format(line_count, biggest)
         initial_gate_departure = df.ix[i]['actual_gate_departure']
         if df.ix[i]['actual_gate_departure'] is not None:
             df_tmp = df[df['actual_gate_departure'] < df.ix[i]['actual_gate_departure']]
@@ -80,97 +80,97 @@ def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, h
             continue
         df_tmp = df_tmp.sort_index(by='actual_gate_departure')
         svm_row = []
-        j = 1
+        column_count = 1
         # append class first
         if kind == "svm" and clazz is not None:
             svm_row.append("{0}".format(clazz))
         # loop through all the rows in the previous flights
-        for ii, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
+        for row_count, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
             cache = False
-            if ii in row_cache:
-                svm_row = row_cache[ii]
+            if row_count in row_cache:
+                svm_row = row_cache[row_count]
                 cache = True
-            for n, val in enumerate(row):
+            for column, val in enumerate(row):
                 if not cache:
-                    if df.columns[n] not in ignored_columns and str(val) != "nan" and val is not None:
+                    if df.columns[column] not in ignored_columns and str(val) != "nan" and val is not None:
                         if type(val) is datetime.datetime:
-                            if k == 0 and kind == "bayesian" and do_header:
-                                header += ["{0}_weekday".format(j), "{0}_day".format(j), "{0}_hour".format(j), "{0}_minute".format(j), "{0}_second".format(j)]
+                            if line_count == 0 and kind == "bayesian" and do_header:
+                                header += ["{0}_weekday".format(column_count), "{0}_day".format(column_count), "{0}_hour".format(column_count), "{0}_minute".format(column_count), "{0}_second".format(column_count)]
                             if kind == "svm":
-                                svm_row.append("{0}:{1}".format(j, val.weekday()))
-                                j += 1
+                                svm_row.append("{0}:{1}".format(column_count, val.weekday()))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val.weekday()))
                             if kind == "svm":
-                                svm_row.append("{0}:{1}".format(j, val.day))
-                                j += 1
+                                svm_row.append("{0}:{1}".format(column_count, val.day))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val.day))
                             if kind == "svm":
-                                svm_row.append("{0}:{1}".format(j, val.hour))
-                                j += 1
+                                svm_row.append("{0}:{1}".format(column_count, val.hour))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val.hour))
                             if kind == "svm":
-                                svm_row.append("{0}:{1}".format(j, val.minute))
-                                j += 1
+                                svm_row.append("{0}:{1}".format(column_count, val.minute))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val.minute))
                             if kind == "svm":
-                                svm_row.append("{0}:{1}".format(j, val.second))
-                                j += 1
+                                svm_row.append("{0}:{1}".format(column_count, val.second))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val.second))
                         else:
-                            if k == 0 and kind == "bayesian" and do_header:
-                                header.append("{0}_{1}".format(j, df.columns[n]))
+                            if line_count == 0 and kind == "bayesian" and do_header:
+                                header.append("{0}_{1}".format(column_count, df.columns[column]))
                             if kind == "svm":
                                 val_tmp = val 
-                                if df.dtypes[n] == "object":
+                                if df.dtypes[column] == "object":
                                     # if the column has not been seen before
-                                    if df.columns[n] not in unique_cols:
+                                    if df.columns[column] not in unique_cols:
                                         # add it to the unique cols map
-                                        unique_cols[df.columns[n]] = []
+                                        unique_cols[df.columns[column]] = []
                                     # if we have not seen this val before
-                                    if val not in unique_cols[df.columns[n]]:
+                                    if val not in unique_cols[df.columns[column]]:
                                         # append to the unqiue_cols for this column
-                                        unique_cols[df.columns[n]].append(val)
+                                        unique_cols[df.columns[column]].append(val)
                                         # index is what we want to record for svm (svm uses floats not categorical data (strings))
-                                        val_tmp = unique_cols[df.columns[n]].index(val)
+                                        val_tmp = unique_cols[df.columns[column]].index(val)
                                     else:
-                                        # otherwise we get the j for this val in this column
-                                        val_tmp = unique_cols[df.columns[n]].index(val)
-                                svm_row.append("{0}:{1}".format(j, val_tmp))
-                                j += 1
+                                        # otherwise we get the column_count for this val in this column
+                                        val_tmp = unique_cols[df.columns[column]].index(val)
+                                svm_row.append("{0}:{1}".format(column_count, val_tmp))
+                                column_count += 1
                             else:
                                 svm_row.append("{0}".format(val))
-                        row_cache[ii] = svm_row 
-                    elif k == 0 and kind == "bayesian" and do_header and df.columns[n] not in ignored_columns:
-                        header.append("{0}_{1}".format(j, df.columns[n]))
-                if df.columns[n] == 'actual_gate_departure':
+                        row_cache[row_count] = svm_row 
+                    elif line_count == 0 and kind == "bayesian" and do_header and df.columns[column] not in ignored_columns:
+                        header.append("{0}_{1}".format(column_count, df.columns[column]))
+                if line_count == 0 and df.columns[column] == 'actual_gate_departure':
                     if kind == "bayesian" and do_header:
-                        header.append("{0}_gate_time_difference".format(j))
+                        header.append("{0}_gate_time_difference".format(column_count))
                     diff = minutes_difference(initial_gate_departure, val)
                     if kind == "svm":
-                        svm_row.append("{0}:{1}".format(j, diff))
-                        j += 1
+                        svm_row.append("{0}:{1}".format(column_count, diff))
+                        column_count += 1
                     else:
                         svm_row.append("{0}".format(diff))
             if kind == "bayesian":
-                j += 1
+                column_count += 1
 
 #                    print val
 
         
         
         num += 1
-        if k == 0 and kind == "bayesian" and do_header:
-            data += "%" + ",".join(header) + "\n"
+        if line_count == 0 and kind == "bayesian" and do_header:
+            data += "%" + ",".join(header) + "\column"
         if kind == "svm":
-            data += " ".join(svm_row) + "\n"
+            data += " ".join(svm_row) + "\column"
         else:
-            data += ",".join(svm_row) + "\n"
-        k += 1
+            data += ",".join(svm_row) + "\column"
+        line_count += 1
         output_file.write(data)
     
     return num

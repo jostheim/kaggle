@@ -59,11 +59,23 @@ def parse_date_time(val):
 #22 scheduled_aircraft_type              22258  non-null values
 #23 actual_aircraft_type                 0  non-null values
 #24 icao_aircraft_type_actual            23692  non-null values
-def process_flight_history_data(kind, do_header, df, biggest, ignored_columns, header, output_file, clazz=None, ):
+def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, clazz=None):
+    df_late = df[df['runway_arrival_differences'] > datetime.timedelta(0, 0, 0)]
+    df_ontime = df[df['runway_arrival_differences'] <= datetime.timedelta(0, 0, 0)]
+    series = df_late['actual_gate_departure'].dropna()
+    series1= df_ontime['actual_gate_departure'].dropna()
+    biggest = len(series.values)
+    if len(series1.values) < biggest:
+        biggest = len(series1.values)
+    if kind == "bayesian":
+        biggest = None
+    process_flight_history_each(kind, do_header, df_late, series, biggest, ignored_columns, header, output_file, clazz)
+    process_flight_history_each(kind, do_header, df_ontime, series1, biggest, ignored_columns, header, output_file, clazz)
+
+def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file, clazz=None):    
     num = 0
     # build up a list for each row of the rows that come before it in time, we are going to flatten those
     unique_cols =  {}
-    series = df['actual_gate_departure'].dropna()
     df = df.ix[series.index]
     line_count = 0
     row_cache = {}
@@ -174,21 +186,12 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
     df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_differences'] = runway_arrival_difference
-    df_late = df[df['runway_arrival_differences'] > datetime.timedelta(0, 0, 0)]
-    df_ontime = df[df['runway_arrival_differences'] <= datetime.timedelta(0, 0, 0)]
-    biggest = len(df_late.values)
-    if len(df_ontime.values) < biggest:
-        biggest = len(df_ontime.values)
-    if kind == "bayesian":
-        biggest = None
     header = []
     ignored_columns = []
     if kind == "svm":
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-        output_file = open(output_file_name+"_positive", 'w')
-        num_negative = process_flight_history_data(kind, do_header, df_late, biggest, ignored_columns, header, output_file, clazz="-1" )
-        output_file = open(output_file_name+"_negative", 'w')
-        num_positive = process_flight_history_data(kind, False, df_ontime, biggest, ignored_columns, header, output_file, clazz="+1")
+        output_file = open(output_file_name, 'w')
+        num_negative = process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, clazz="-1" )
     else:
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
         output_file = open(output_file_name+"_positive", 'w')

@@ -221,11 +221,11 @@ if __name__ == '__main__':
         if kind == "bayesian":
             output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:
-#            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
-            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
+            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
         else:
-#            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, True])
-            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
+            pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, True])
+#            data, num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
     for num_negative_tmp, num_positive_tmp in result:

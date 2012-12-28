@@ -59,7 +59,7 @@ def parse_date_time(val):
 #22 scheduled_aircraft_type              22258  non-null values
 #23 actual_aircraft_type                 0  non-null values
 #24 icao_aircraft_type_actual            23692  non-null values
-def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, clazz=None):
+def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file):
     df_late = df[df['runway_arrival_differences'] > datetime.timedelta(0, 0, 0)]
     df_ontime = df[df['runway_arrival_differences'] <= datetime.timedelta(0, 0, 0)]
     series = df_late['actual_gate_departure'].dropna()
@@ -69,8 +69,8 @@ def process_flight_history_data(kind, do_header, df, ignored_columns, header, ou
         biggest = len(series1.values)
     if kind == "bayesian":
         biggest = None
-    num_negative = process_flight_history_each(kind, do_header, df_late, series, biggest, ignored_columns, header, output_file, clazz)
-    num_positive = process_flight_history_each(kind, do_header, df_ontime, series1, biggest, ignored_columns, header, output_file, clazz)
+    num_negative = process_flight_history_each(kind, do_header, df_late, series, biggest, ignored_columns, header, output_file, clazz="-1")
+    num_positive = process_flight_history_each(kind, do_header, df_ontime, series1, biggest, ignored_columns, header, output_file, clazz="+1")
     return num_negative, num_positive
 
 def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file, clazz=None):    
@@ -192,7 +192,7 @@ def process_flight_history_file(kind, filename, output_file_name, do_header=Fals
     output_file = open(output_file_name, 'w')
     if kind == "svm":
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-        num_negative, num_positive = process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, clazz="-1" )
+        num_negative, num_positive = process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file)
     else:
 #        ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type"]
         num_negative, num_positive = process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file)

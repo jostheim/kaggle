@@ -197,7 +197,7 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
 
 def process_flight_history_file(kind, filename, test_filename, output_file_name, do_header=False):
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+#    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
     
     runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']

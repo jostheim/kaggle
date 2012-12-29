@@ -266,7 +266,7 @@ if __name__ == '__main__':
                     num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True)
             else:
                 if 'multi' in kind:
-                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), '{0}/FlightHistory/flighthistory.csv'.format(test_path), output_file_name, True])
+                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True])
                 else:
                     num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False)
             i += 1

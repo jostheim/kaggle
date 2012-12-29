@@ -155,6 +155,15 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         svm_row = []
         column_count = 1
         print "working on {0}/{1}".format(line_count, biggest)
+        # set the class for svm, we are using multi-class binned by 1 minute
+        if kind == "svm":
+            if df.ix[i]['runway_arrival_diff'] is np.nan:
+                continue
+            diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
+            if diff > 0:
+                svm_row.append(str(diff))
+            else:
+                continue
         # this flights data
         column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, svm_row, column_count, 0, df.ix[i], False)
         # this is the scheduled gate departure for the current flight (flight index i)
@@ -169,15 +178,6 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
             continue
         # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
         df_tmp = df_tmp.sort_index(by='scheduled_gate_departure')
-        # set the class for svm, we are using multi-class binned by 1 minute
-        if kind == "svm":
-            if df.ix[i]['runway_arrival_diff'] is np.nan:
-                continue
-            diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
-            if diff > 0:
-                svm_row.append(str(diff))
-            else:
-                continue
         # loop through all the rows in the previous flights
         for row_count, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
             cache = False
@@ -259,11 +259,15 @@ if __name__ == '__main__':
             if kind == "bayesian":
                 output_file_name = subdirname + sys.argv[2] + ".csv"
             if i == 0:
-#                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True])
-                num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True)
+                if 'multi' in kind:
+                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True])
+                else:
+                    num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True)
             else:
-#                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), '{0}/FlightHistory/flighthistory.csv'.format(test_path), output_file_name, True])
-                num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False)
+                if 'multi' in kind:
+                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), '{0}/FlightHistory/flighthistory.csv'.format(test_path), output_file_name, True])
+                else:
+                    num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False)
             i += 1
         result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
         for num_tmp in result:

@@ -16,6 +16,7 @@ from multiprocessing import Pool
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
+data_test_rev_prefix = 'SampleTestSet'
 #data_transform_dict = {'published_departure':np.float64}
 
 def minutes_difference(datetime1, datetime2):
@@ -82,12 +83,21 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     for i in random.sample(series.index, biggest):
         data = ""
         print "working on {0}/{1}".format(line_count, biggest)
-        initial_gate_departure = df.ix[i]['actual_gate_departure']
-        if df.ix[i]['actual_gate_departure'] is not None:
-            df_tmp = df[df['actual_gate_departure'] < df.ix[i]['actual_gate_departure']]
+        #TODO we are not using any of this flights information yet, we are only using the
+        # earlier departures info
+        
+        # this is the scheduled gate departure for the current flight (flight index i)
+        initial_gate_departure = df.ix[i]['scheduled_gate_departure']
+        # we want to create a new data frame with all the flights with scheduled departures less than
+        # this flights, these are flights that left before this flight and therefore could be
+        # correlated with this flights arrival
+        # using scheduled b/c it should be availble all the time
+        if df.ix[i]['scheduled_gate_departure'] is not None:
+            df_tmp = df[df['scheduled_gate_departure'] < df.ix[i]['scheduled_gate_departure']]
         else:
             continue
-        df_tmp = df_tmp.sort_index(by='actual_gate_departure')
+        # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
+        df_tmp = df_tmp.sort_index(by='scheduled_gate_departure')
         # set the class for svm
         svm_row = []
         if kind == "svm":
@@ -160,7 +170,9 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
                         row_cache[row_count] = svm_row 
                     elif line_count == 0 and kind == "bayesian" and do_header and df.columns[column] not in ignored_columns:
                         header.append("{0}_{1}".format(column_count, df.columns[column]))
-                if line_count == 0 and df.columns[column] == 'actual_gate_departure':
+                # This section builds for each of the flights earlier than the one we are looking at
+                # how much earlier it is
+                if df.columns[column] == 'scheduled_gate_departure':
                     if kind == "bayesian" and do_header:
                         header.append("{0}_gate_time_difference".format(column_count))
                     diff = minutes_difference(initial_gate_departure, val)
@@ -183,8 +195,11 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     
     return num
 
-def process_flight_history_file(kind, filename, output_file_name, do_header=False):
-    df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+def process_flight_history_file(kind, filename, test_filename, output_file_name, do_header=False):
+    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+    # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
+    
     runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_differences'] = runway_arrival_difference
     header = []
@@ -240,15 +255,16 @@ if __name__ == '__main__':
         pool = Pool(processes=8)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
+            test_path = os.path.join('{0}{1}'.format(data_prefix, data_test_rev_prefix), subdirname)
             print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
             output_file_name = subdirname + "_" + sys.argv[2] + ".tab"
             if kind == "bayesian":
                 output_file_name = subdirname + sys.argv[2] + ".csv"
             if i == 0:
-                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, True])
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), '{0}/FlightHistory/flighthistory.csv'.format(test_path), output_file_name, True])
 #                num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path),output_file_name,  True)
             else:
-                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path),  output_file_name, True])
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), '{0}/FlightHistory/flighthistory.csv'.format(test_path), output_file_name, True])
 #                num_negative_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, False)
             i += 1
         result = pool.map(process_flight_history_file_proxy, pool_queue, 1)

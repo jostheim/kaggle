@@ -71,7 +71,8 @@ def process_flight_history_data(kind, do_header, df, ignored_columns, header, ou
     return num
 
 
-def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, svm_row, column_count, row_count, row, cache, initial_gate_departure=None):
+def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, column_count, row_count, row, cache, initial_gate_departure=None):
+    new_row = []
     for column, val in enumerate(row):
         if not cache and df.columns[column] not in ignored_columns:
             if val is not np.nan and str(val) != "nan" and val is not None:
@@ -79,30 +80,30 @@ def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_
                     if line_count == 0 and "bayesian" in kind and do_header:
                         header += ["{0}_weekday".format(column_count), "{0}_day".format(column_count), "{0}_hour".format(column_count), "{0}_minute".format(column_count), "{0}_second".format(column_count)]
                     if "svm" in kind:
-                        svm_row.append("{0}:{1}".format(column_count, val.weekday()))
+                        new_row.append("{0}:{1}".format(column_count, val.weekday()))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val.weekday()))
+                        new_row.append("{0}".format(val.weekday()))
                     if "svm" in kind:
-                        svm_row.append("{0}:{1}".format(column_count, val.day))
+                        new_row.append("{0}:{1}".format(column_count, val.day))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val.day))
+                        new_row.append("{0}".format(val.day))
                     if "svm" in kind:
-                        svm_row.append("{0}:{1}".format(column_count, val.hour))
+                        new_row.append("{0}:{1}".format(column_count, val.hour))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val.hour))
+                        new_row.append("{0}".format(val.hour))
                     if "svm" in kind:
-                        svm_row.append("{0}:{1}".format(column_count, val.minute))
+                        new_row.append("{0}:{1}".format(column_count, val.minute))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val.minute))
+                        new_row.append("{0}".format(val.minute))
                     if "svm" in kind:
-                        svm_row.append("{0}:{1}".format(column_count, val.second))
+                        new_row.append("{0}:{1}".format(column_count, val.second))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val.second))
+                        new_row.append("{0}".format(val.second))
                 else:
                     if line_count == 0 and "bayesian" in kind and do_header:
                         header.append("{0}_{1}".format(column_count, df.columns[column]))
@@ -118,12 +119,12 @@ def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_
                                 val_tmp = unique_cols[df.columns[column]].index(val)
                             else:
                                 val_tmp = unique_cols[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
-                        svm_row.append("{0}:{1}".format(column_count, val_tmp))
+                        new_row.append("{0}:{1}".format(column_count, val_tmp))
                         column_count += 1
                     else:
-                        svm_row.append("{0}".format(val))
-                if row_count is not None:
-                    row_cache[row_count] = svm_row
+                        new_row.append("{0}".format(val))
+                if row_cache is not None and row_count is not None:
+                    row_cache[row_count] = new_row
             elif line_count == 0 and "bayesian" in kind and do_header and df.columns[column] not in ignored_columns:
                 header.append("{0}_{1}".format(column_count, df.columns[column])) # This section builds for each of the flights earlier than the one we are looking at
         # how much earlier it is
@@ -132,13 +133,13 @@ def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_
                 header.append("{0}_gate_time_difference".format(column_count))
             diff = minutes_difference(initial_gate_departure, val)
             if "svm" in kind:
-                svm_row.append("{0}:{1}".format(column_count, diff))
+                new_row.append("{0}:{1}".format(column_count, diff))
                 column_count += 1
             else:
-                svm_row.append("{0}".format(diff))
+                new_row.append("{0}".format(diff))
     if "bayesian" in kind:
         column_count += 1
-    return column_count
+    return new_row, column_count
 
 def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file):    
     num = 0
@@ -158,16 +159,14 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         # set the class for svm, we are using multi-class binned by 1 minute
         if "svm" in kind:
             if df.ix[i]['runway_arrival_diff'] is np.nan:
+                line_count += 1
                 continue
             diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
             if diff > 0:
                 svm_row.append(str(diff))
             else:
+                line_count += 1
                 continue
-        # this flights data
-        column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, svm_row, column_count, 0, df.ix[i], False)
-        # this is the scheduled gate departure for the current flight (flight index i)
-        initial_gate_departure = df.ix[i]['scheduled_gate_departure']
         # we want to create a new data frame with all the flights with scheduled departures less than
         # this flights, these are flights that left before this flight and therefore could be
         # correlated with this flights arrival
@@ -175,16 +174,24 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         if df.ix[i]['scheduled_gate_departure'] is not None:
             df_tmp = df[df['scheduled_gate_departure'] < df.ix[i]['scheduled_gate_departure']]
         else:
+            line_count += 1
             continue
+        # this flights data
+        new_row, column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, None, column_count, None, df.ix[i], False)
+        svm_row += new_row
+        # this is the scheduled gate departure for the current flight (flight index i)
+        initial_gate_departure = df.ix[i]['scheduled_gate_departure']
         # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
         df_tmp = df_tmp.sort_index(by='scheduled_gate_departure')
         # loop through all the rows in the previous flights
         for row_count, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
             cache = False
             if row_count in row_cache:
-                svm_row = row_cache[row_count]
+                svm_row += row_cache[row_count]
                 cache = True
-            column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, svm_row, column_count, row_count, row, cache, initial_gate_departure=initial_gate_departure)
+            else:
+                new_row, column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, column_count, row_count, row, cache, initial_gate_departure=initial_gate_departure)
+                svm_row += new_row
         num += 1
         if line_count == 0 and "bayesian" in kind and do_header:
             data += "%" + ",".join(header) + "\n"

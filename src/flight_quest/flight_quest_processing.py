@@ -298,7 +298,7 @@ def process_flight_history_file_proxy(args):
     output_file_name = args[2]
     test_file_name = args[3]
     unique_cols = args[4]
-    return process_flight_history_file(kind, filename, output_file_name, test_file_name, do_header, unique_cols)
+    return process_flight_history_file(kind, filename, output_file_name, test_file_name, unique_cols)
  
 if __name__ == '__main__':
     kind = sys.argv[1]

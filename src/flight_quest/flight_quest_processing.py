@@ -231,7 +231,7 @@ def process_flight_history_file(kind, filename, output_file_name, test_filename,
 #    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
     header = []
-    ignored_columns = ['actual_gate_arrival','actual_runway_arrival','runway_arrival_diff', 'runway_arrival_differences' ]
+    ignored_columns = ['actual_gate_arrival','actual_runway_arrival','runway_arrival_diff', 'runway_arrival_differences', 'gate_arrival_diff']
     output_file = open(output_file_name, 'w')
 #   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
     num = process_flight_history_data(kind, "bayesian" in kind, df, ignored_columns, header, output_file, unique_cols)

@@ -234,7 +234,7 @@ def process_flight_history_file(kind, filename, output_file_name, test_filename,
     ignored_columns = ['actual_gate_arrival','actual_runway_arrival','runway_arrival_diff', 'runway_arrival_differences' ]
     output_file = open(output_file_name, 'w')
 #   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-    num = process_flight_history_data(kind, kind == "bayesian", df, ignored_columns, header, output_file, unique_cols)
+    num = process_flight_history_data(kind, "bayesian" in kind, df, ignored_columns, header, output_file, unique_cols)
     output_file.close()
     return num
 

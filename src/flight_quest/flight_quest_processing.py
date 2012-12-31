@@ -210,7 +210,8 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
                 pass
             else:
 #                if offset not in offsets_seen:
-                    new_row, column_count = process_row(kind, do_header, df_tmp, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, unique_cols, initial_departure=initial_departure)
+
+                    new_row, column_count = process_row(kind, do_header, df_tmp, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, initial_departure=initial_departure)
                     svm_row += new_row
 #                    offsets_seen.append(offset)
         num += 1
@@ -225,7 +226,7 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     
     return num
 
-def process_flight_history_file(kind, filename, output_file_name, test_filename, unique_cols, do_header=False):
+def process_flight_history_file(kind, filename, output_file_name, test_filename, unique_cols):
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
 #    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
@@ -326,12 +327,12 @@ if __name__ == '__main__':
             if 'multi' in kind:
                 pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
             else:
-                num_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns)
+                num_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns)
         else:
             if 'multi' in kind:
                 pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
             else:
-                num_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False, unique_columns)
+                num_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns)
         i += 1
     result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
     for num_tmp in result:

@@ -295,10 +295,9 @@ def get_base_data():
 def process_flight_history_file_proxy(args):
     kind = args[0]
     filename = args[1]
-    do_header = args[4]
     output_file_name = args[2]
     test_file_name = args[3]
-    unique_cols = args[5]
+    unique_cols = args[4]
     return process_flight_history_file(kind, filename, output_file_name, test_file_name, do_header, unique_cols)
  
 if __name__ == '__main__':

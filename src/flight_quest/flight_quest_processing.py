@@ -12,6 +12,7 @@ import os
 import random
 import sys
 from multiprocessing import Pool
+import pickle
 
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
@@ -61,22 +62,24 @@ def parse_date_time(val):
 #22 scheduled_aircraft_type              22258  non-null values
 #23 actual_aircraft_type                 0  non-null values
 #24 icao_aircraft_type_actual            23692  non-null values
-def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file):
+def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, unique_cols):
     series = df['actual_runway_arrival'].dropna()
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
+    diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+    df['gate_arrival_diff'] = diffs_gate
     if "bayesian" in kind:
         biggest = None
-    num = process_flight_history_each(kind, do_header, df, series, None, ignored_columns, header, output_file)
+    num = process_flight_history_each(kind, do_header, df, series, None, ignored_columns, header, output_file, unique_cols)
     return num
 
 
-def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, initial_gate_departure=None):
+def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, initial_departure=None):
     new_row = []
     column_count = offset
     for column, val in enumerate(row):
         if not cache and df.columns[column] not in ignored_columns:
-            if val is not np.nan and str(val) != "nan" and val is not None:
+            if val is not np.nan and val is not None:
                 if type(val) is datetime.datetime:
                     if line_count == 0 and "bayesian" in kind and do_header:
                         header += ["{0}_weekday".format(column_count), "{0}_day".format(column_count), "{0}_hour".format(column_count), "{0}_minute".format(column_count), "{0}_second".format(column_count)]
@@ -84,73 +87,65 @@ def process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_
                         new_row.append("{0}:{1}".format(column_count, val.weekday()))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val.weekday()))
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val.weekday()))
                     if "svm" in kind:
                         new_row.append("{0}:{1}".format(column_count, val.day))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val.day))
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val.day))
                     if "svm" in kind:
                         new_row.append("{0}:{1}".format(column_count, val.hour))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val.hour))
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val.hour))
                     if "svm" in kind:
                         new_row.append("{0}:{1}".format(column_count, val.minute))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val.minute))
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val.minute))
                     if "svm" in kind:
                         new_row.append("{0}:{1}".format(column_count, val.second))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val.second))
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val.second))
                 else:
                     if line_count == 0 and "bayesian" in kind and do_header:
                         header.append("{0}_{1}".format(column_count, df.columns[column]))
                     if "svm" in kind:
                         val_tmp = val
                         if df.dtypes[column] == "object":
-                            # if the column has not been seen before
-                            if df.columns[column] not in unique_cols:
-                                # add it to the unique cols map
-                                unique_cols[df.columns[column]] = [] # if we have not seen this val before
-                            if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
-                                unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
-                                val_tmp = unique_cols[df.columns[column]].index(val)
-                            else:
-                                val_tmp = unique_cols[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
+                            val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
                         new_row.append("{0}:{1}".format(column_count, val_tmp))
                         column_count += 1
                     else:
-                        new_row.append("{0}".format(val))
-                if row_cache is not None and row_count is not None:
-                    row_cache[row_count] = new_row
+                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
+#                if row_cache is not None and row_count is not None:
+#                    row_cache[row_count] = new_row
             elif line_count == 0 and "bayesian" in kind and do_header and df.columns[column] not in ignored_columns:
                 header.append("{0}_{1}".format(column_count, df.columns[column])) # This section builds for each of the flights earlier than the one we are looking at
         # how much earlier it is
-        if df.columns[column] == 'scheduled_gate_departure' and initial_gate_departure is not None:
+        if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
             if "bayesian" in kind and do_header:
-                header.append("{0}_gate_time_difference".format(column_count))
-            diff = minutes_difference(initial_gate_departure, val)
+                header.append("{0}_runway_time_difference".format(column_count))
+            diff = minutes_difference(initial_departure, val)
             if "svm" in kind:
                 new_row.append("{0}:{1}".format(column_count, diff))
                 column_count += 1
             else:
-                new_row.append("{0}".format(diff))
+                new_row.append("{0}_{1}:{2}".format(column_count, "runway_time_difference", diff))
     if "bayesian" in kind:
         column_count += 1
     return new_row, column_count
 
-def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file):    
+def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file, unique_cols):    
     num = 0
     # build up a list for each row of the rows that come before it in time, we are going to flatten those
-    unique_cols =  {}
     offsets_seen = []
     df = df.ix[series.index]
     line_count = 0
     row_cache = {}
     MAX_NUMBER = 50
+#    features_frame = pd.DataFrame()
     if biggest is None:
         biggest = len(series)
     for i in random.sample(series.index, biggest):
@@ -159,46 +154,65 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         column_count = 1
         print "working on {0}/{1}".format(line_count, biggest)
         # set the class for svm, we are using multi-class binned by 1 minute
-        if "svm" in kind:
-            if df.ix[i]['runway_arrival_diff'] is np.nan:
-                line_count += 1
-                continue
-            diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
-            if diff > 0:
-                svm_row.append(str(diff))
+        
+        if "svm" in kind and df.ix[i]['runway_arrival_diff'] is np.nan:
+            line_count += 1
+            continue
+        
+        runway_arrival_diff = np.nan
+        gate_arrival_diff = np.nan
+        if df.ix[i]['runway_arrival_diff'] is not np.nan:
+            runway_arrival_diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
+        if df.ix[i]['gate_arrival_diff'] is not np.nan:
+            gate_arrival_diff = int(df.ix[i]['gate_arrival_diff'].days*24*60+df.ix[i]['gate_arrival_diff'].seconds/60)
+        
+        if "svm" in kind: 
+            if runway_arrival_diff > 0:
+                if "svm" in kind:
+                    svm_row.append(str(runway_arrival_diff))
             else:
                 line_count += 1
                 continue
+        
+        if "bayesian" in kind:
+            if line_count == 0:
+                header.append("runway_arrival_diff")
+                header.append("gate_arrival_diff")
+            if runway_arrival_diff is not np.nan:
+                svm_row.append("{0}:{1}".format("runway_arrival_diff", runway_arrival_diff))
+            if gate_arrival_diff is not np.nan:
+                svm_row.append("{0}:{1}".format("gate_arrival_diff", gate_arrival_diff))
+
         # we want to create a new data frame with all the flights with scheduled departures less than
         # this flights, these are flights that left before this flight and therefore could be
         # correlated with this flights arrival
         # using scheduled b/c it should be availble all the time
-        if df.ix[i]['scheduled_gate_departure'] is not None:
-            df_tmp = df[df['scheduled_gate_departure'] < df.ix[i]['scheduled_gate_departure']]
-            df_tmp['scheduled_gate_diff'] = df.ix[i]['scheduled_gate_departure'] - df['scheduled_gate_departure'] 
+        if df.ix[i]['scheduled_runway_departure'] is not None:
+            df_tmp = df[df['scheduled_runway_departure'] < df.ix[i]['scheduled_runway_departure']]
+            df_tmp['scheduled_runway_diff'] = df.ix[i]['scheduled_runway_departure'] - df['scheduled_runway_departure'] 
         else:
             line_count += 1
             continue
         # this flights data
-        new_row, column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, None, None, df.ix[i], False, 1)
+        new_row, column_count = process_row(kind, do_header, df, ignored_columns, header, unique_cols, line_count, None, None, df.ix[i], False, 1, unique_cols)
         svm_row += new_row
         # this is the scheduled gate departure for the current flight (flight index i)
-        initial_gate_departure = df.ix[i]['scheduled_gate_departure']
+        initial_departure = df.ix[i]['scheduled_runway_departure']
         # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
-        df_tmp = df_tmp.sort_index(by='scheduled_gate_departure')
+        df_tmp = df_tmp.sort_index(by='scheduled_runway_departure')
         # loop through all the rows in the previous flights
         for row_count, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
             cache = False
-            offset = int((row[len(row)-1].days*24*60+row[len(row)-1].seconds/60))
+            offset = column_count# int((row[len(row)-1].days*24*60+row[len(row)-1].seconds/60))*len(df.columns)
             if row_count in row_cache:
 #               svm_row += row_cache[row_count]
 #               cache = True
                 pass
             else:
-                if offset not in offsets_seen:
-                    new_row, column_count = process_row(kind, do_header, df_tmp, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, initial_gate_departure=initial_gate_departure)
+#                if offset not in offsets_seen:
+                    new_row, column_count = process_row(kind, do_header, df_tmp, ignored_columns, header, unique_cols, line_count, row_cache, row_count, row, cache, offset, unique_cols, initial_departure=initial_departure)
                     svm_row += new_row
-                    offsets_seen.append(offset)
+#                    offsets_seen.append(offset)
         num += 1
         if line_count == 0 and "bayesian" in kind and do_header:
             data += "%" + ",".join(header) + "\n"
@@ -211,30 +225,70 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     
     return num
 
-def process_flight_history_file(kind, filename, output_file_name, test_filename, do_header=False):
+def process_flight_history_file(kind, filename, output_file_name, test_filename, unique_cols, do_header=False):
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
 #    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
-    
-    runway_arrival_difference =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
-    df['runway_arrival_differences'] = runway_arrival_difference
     header = []
     ignored_columns = ['actual_gate_arrival','actual_runway_arrival','runway_arrival_diff', 'runway_arrival_differences' ]
     output_file = open(output_file_name, 'w')
 #   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-    num = process_flight_history_data(kind, kind == "bayesian", df, ignored_columns, header, output_file)
+    num = process_flight_history_data(kind, kind == "bayesian", df, ignored_columns, header, output_file, unique_cols)
     output_file.close()
     return num
 
-def get_maxes_and_mins(filename):
-    df = pd.read_csv('{0}{1}/2012_11_12/FlightHistory/flighthistory.csv'.format(data_prefix, data_rev_prefix), index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-    diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
-    series = diffs.dropna()
-    all_diffs = []
-    for diff in series:
-        all_diffs.append(diff.days*24*60+diff.seconds/60)
-    all_diffs = np.asarray(all_diffs)
-    return np.max(all_diffs), np.min(all_diffs)
+def get_base_data():
+    unique_cols = {}
+    runway_arrival_diff = None
+    gate_arrival_diff = None
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
+        print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
+        filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
+        df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+        
+        diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
+        df['runway_arrival_diff'] = diffs
+        diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+        series = diffs.dropna()
+        all_diffs = []
+        for diff in series:
+            all_diffs.append(diff.days*24*60+diff.seconds/60)
+        all_diffs = np.asarray(all_diffs)
+        if runway_arrival_diff is None:
+            runway_arrival_diff = [np.max(all_diffs), np.min(all_diffs)]
+        else:
+            if np.max(all_diffs) >  runway_arrival_diff[0]:
+                runway_arrival_diff[0] = np.max(all_diffs)
+            if np.min(all_diffs) < runway_arrival_diff[1]:
+                runway_arrival_diff[1] = np.min(all_diffs)
+        series = diffs_gate.dropna()
+        all_diffs = []
+        for diff in series:
+            all_diffs.append(diff.days*24*60+diff.seconds/60)
+        all_diffs = np.asarray(all_diffs)
+        if gate_arrival_diff is None:
+            gate_arrival_diff = [np.max(all_diffs), np.min(all_diffs)]
+        else:
+            if np.max(all_diffs) >  gate_arrival_diff[0]:
+                gate_arrival_diff[0] = np.max(all_diffs)
+            if np.min(all_diffs) < gate_arrival_diff[1]:
+                gate_arrival_diff[1] = np.min(all_diffs)
+                
+        for row in df.values:
+            for column, val in enumerate(row):
+                if df.dtypes[column] == "object" and type(val) is datetime.datetime:
+                    # if the column has not been seen before
+                    if df.columns[column] not in unique_cols:
+                        # add it to the unique cols map
+                        unique_cols[df.columns[column]] = [] # if we have not seen this val before
+                    if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
+                        unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
+        
+    dict = {"gate_arrival_min":gate_arrival_diff[1], "gate_arrival_max":gate_arrival_diff[0], "runway_arrival_min":runway_arrival_diff[1], "runway_arrival_max":runway_arrival_diff[0]}
+    pickle.dump(dict, open("min_maxes.pickle", "wb"))
+    
+    pickle.dump(unique_cols, open("unique_columns.pickle", "wb"))
     
 
 def process_flight_history_file_proxy(args):
@@ -243,48 +297,41 @@ def process_flight_history_file_proxy(args):
     do_header = args[4]
     output_file_name = args[2]
     test_file_name = args[3]
-    return process_flight_history_file(kind, filename, output_file_name, test_file_name, do_header)
+    unique_cols = args[5]
+    return process_flight_history_file(kind, filename, output_file_name, test_file_name, do_header, unique_cols)
  
 if __name__ == '__main__':
     kind = sys.argv[1]
     num = 0
     i = 0
-    if kind == 'max_min':
-        most_max = None
-        most_min = None
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
-            print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
-            max, min = get_maxes_and_mins('{0}/FlightHistory/flighthistory.csv'.format(path))
-            if most_max is None or max > most_max:
-                most_max = max
-            if most_min is None or (min < most_min and min > 0):
-                most_min = min
-                if most_min < 0:
-                    most_min = 0
-        print most_max, most_min
-    else:
-        pool_queue = []
-        pool = Pool(processes=8)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
-            test_path = os.path.join('{0}{1}'.format(data_prefix, data_test_rev_prefix), subdirname)
-            print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
-            output_file_name = subdirname + "_" + sys.argv[2] + ".tab"
-            if "bayesian" in kind:
-                output_file_name = subdirname + sys.argv[2] + ".csv"
-            if i == 0:
-                if 'multi' in kind:
-                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True])
-                else:
-                    num_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True)
+    try:
+        unique_columns = pickle.load(open("unique_columns.p",'rb'))
+        min_maxes = pickle.load(open("min_maxes.p", 'rb'))
+    except Exception as e:
+        get_base_data()
+        unique_columns = pickle.load(open("unique_columns.p", 'rb'))
+        min_maxes = pickle.load(open("min_maxes.p", 'rb'))
+    pool_queue = []
+    pool = Pool(processes=8)
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        path = os.path.join('{0}{1}'.format(data_prefix, data_rev_prefix), subdirname)
+        test_path = os.path.join('{0}{1}'.format(data_prefix, data_test_rev_prefix), subdirname)
+        print "working on {0}".format('{0}/FlightHistory/flighthistory.csv'.format(path))
+        output_file_name = subdirname + "_" + sys.argv[2] + ".tab"
+        if "bayesian" in kind:
+            output_file_name = subdirname + sys.argv[2] + ".csv"
+        if i == 0:
+            if 'multi' in kind:
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
             else:
-                if 'multi' in kind:
-                    pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True])
-                else:
-                    num_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False)
-            i += 1
-        result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
-        for num_tmp in result:
-            num += num_tmp
-        print "num: {0}".format(num)
+                num_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns)
+        else:
+            if 'multi' in kind:
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
+            else:
+                num_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), False, unique_columns)
+        i += 1
+    result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
+    for num_tmp in result:
+        num += num_tmp
+    print "num: {0}".format(num)

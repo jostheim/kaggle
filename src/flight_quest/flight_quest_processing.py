@@ -325,12 +325,12 @@ if __name__ == '__main__':
             output_file_name = subdirname + sys.argv[2] + ".csv"
         if i == 0:
             if 'multi' in kind:
-                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns])
             else:
                 num_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns)
         else:
             if 'multi' in kind:
-                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), True, unique_columns])
+                pool_queue.append([kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns])
             else:
                 num_tmp, num_postive_tmp = process_flight_history_file(kind, '{0}/FlightHistory/flighthistory.csv'.format(path), output_file_name, '{0}/FlightHistory/flighthistory.csv'.format(test_path), unique_columns)
         i += 1

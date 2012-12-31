@@ -304,13 +304,15 @@ if __name__ == '__main__':
     kind = sys.argv[1]
     num = 0
     i = 0
-    try:
-        unique_columns = pickle.load(open("unique_columns.p",'rb'))
-        min_maxes = pickle.load(open("min_maxes.p", 'rb'))
-    except Exception as e:
-        get_base_data()
-        unique_columns = pickle.load(open("unique_columns.p", 'rb'))
-        min_maxes = pickle.load(open("min_maxes.p", 'rb'))
+    unique_columns = None
+    if "svm" in kind:
+        try:
+            unique_columns = pickle.load(open("unique_columns.p",'rb'))
+            min_maxes = pickle.load(open("min_maxes.p", 'rb'))
+        except Exception as e:
+            get_base_data()
+            unique_columns = pickle.load(open("unique_columns.p", 'rb'))
+            min_maxes = pickle.load(open("min_maxes.p", 'rb'))
     pool_queue = []
     pool = Pool(processes=8)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:

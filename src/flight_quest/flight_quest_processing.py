@@ -294,11 +294,10 @@ def get_base_data():
 
 def process_flight_history_file_proxy(args):
     kind = args[0]
-    filename = args[1]
+    path= args[1]
     output_file_name = args[2]
-    test_file_name = args[3]
     unique_cols = args[4]
-    return process_flight_history_file(kind, filename, output_file_name, test_file_name, unique_cols)
+    return process_flight_history_file(kind, path, output_file_name, unique_cols)
 
 def rebin(input_file, output_file, nbins):
     input_f = open(input_file, "r")

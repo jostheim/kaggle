@@ -305,20 +305,25 @@ def rebin(input_file, output_file, nbins):
     input_f = open(input_file, "r")
     out = open(output_file, "w")
     data = []
-    bins = []
+    orig_bins = []
     for line in input_f:
         data_line = line.split(" ")
         data.append(data_line[2:])
-        bins.append(data_line[1])
-    bins = np.asarray(bins)
-    bin_max = np.max(bins)
-    bin_min = np.min(bins)
+        orig_bins.append(float(data_line[1]))
+    orig_bins = np.asarray(orig_bins)
+    bin_max = np.max(orig_bins)
+    bin_min = np.min(orig_bins)
     print "bin_max: {0}, bin_min: {1}".format(bin_max, bin_min)
     bins = np.linspace(bin_min, bin_max, nbins) 
-    digitized = numpy.digitize(data, bins)
-    bin_means = [data[digitized == i].mean() for i in range(1, len(bins))]
-    for i, data_columns in data:
-        out.write("{0} {1}".format(bin_means[i], " ".join(data)))
+    digitized = np.digitize(orig_bins, bins)
+    new_bins = []
+    for digit in digitized:
+        if digit == len(bins):
+            new_bins.append(bins[digit-1])
+        else:
+            new_bins.append((bins[digit-1] + bins[digit])/2.0)
+    for i, data_columns in enumerate(data):
+        out.write("{0} {1}".format(int(new_bins[i]), " ".join(data_columns)))
     input_f.close()
     out.close()
  
@@ -355,4 +360,4 @@ if __name__ == '__main__':
             num += num_tmp
         print "num: {0}".format(num)
     if "rebin" in kind:
-        rebin(sys.argv[1], sys.argv[2], int(sys.argv[3]))
+        rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]))

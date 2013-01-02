@@ -210,7 +210,7 @@ def process_flight_history_file(kind, path, output_file_name, unique_cols):
     filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
     events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
     asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
-    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
+#    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
 #    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)

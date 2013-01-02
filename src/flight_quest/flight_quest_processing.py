@@ -13,7 +13,8 @@ import random
 import sys
 from multiprocessing import Pool
 import pickle
-
+from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
+from pytz import timezone
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -68,7 +69,24 @@ def parse_date_time(val):
 #22 scheduled_aircraft_type              22258  non-null values
 #23 actual_aircraft_type                 0  non-null values
 #24 icao_aircraft_type_actual            23692  non-null values
-def process_flight_history_data(kind, do_header, df, ignored_columns, header, output_file, unique_cols):
+def process_flight_history_file(kind, path, output_file_name, unique_cols):
+    filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
+    events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
+    asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
+#    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
+    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+#    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+    # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
+    events_df = pd.read_csv(events_filename, index_col=0, na_values=["MISSING"], parse_dates=[1], date_parser=parse_date_time)
+    header = generate_header(df, ignored_columns)
+    output_file = open(output_file_name, 'w')
+#   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
+    num = process_flight_history_data(kind, "bayesian" in kind, df, events_df, ignored_columns, header, output_file, unique_cols)
+    output_file.close()
+    return num
+
+
+def process_flight_history_data(kind, do_header, df, events_df, ignored_columns, header, output_file, unique_cols):
     series = df['actual_runway_arrival'].dropna()
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
@@ -76,59 +94,10 @@ def process_flight_history_data(kind, do_header, df, ignored_columns, header, ou
     df['gate_arrival_diff'] = diffs_gate
     if "bayesian" in kind:
         biggest = None
-    num = process_flight_history_each(kind, do_header, df, series, None, ignored_columns, header, output_file, unique_cols)
+    num = process_flight_history_each(kind, do_header, df, events_df, series, None, ignored_columns, header, output_file, unique_cols)
     return num
 
-
-def process_row(kind, df, ignored_columns, unique_cols, line_count, row_count, row, offset, initial_departure=None):
-    new_row = []
-    column_count = offset
-    for column, val in enumerate(row):
-        # if column is ignored or the val is missing (nan) then increment and continue
-        if val is np.nan or val is None or str(val) == "nan" or df.columns[column] in ignored_columns:
-            if "svm" in kind:
-                column_count += 1
-            continue 
-        if type(val) is datetime.datetime:
-            if "svm" in kind:
-                new_row.append("{0}:{1}".format(column_count, val.weekday()))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.day))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.hour))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.minute))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.second))
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
-                new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
-                new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
-                new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
-                new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
-        else:
-            if "svm" in kind:
-                val_tmp = val
-                if df.dtypes[column] == "object":
-                    val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
-                new_row.append("{0}:{1}".format(column_count, val_tmp))
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
-        # how much earlier it is
-        if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
-            diff = minutes_difference(initial_departure, val)
-            if "svm" in kind:
-                new_row.append("{0}:{1}".format(column_count, diff))
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}:{2}".format(column_count, "runway_time_difference", diff))
-    if "bayesian" in kind:
-        column_count += 1
-    return new_row, column_count
-
-def process_flight_history_each(kind, do_header, df, series, biggest, ignored_columns, header, output_file, unique_cols):    
+def process_flight_history_each(kind, do_header, df, events_df, series, biggest, ignored_columns, header, output_file, unique_cols):    
     num = 0
     # build up a list for each row of the rows that come before it in time, we are going to flatten those
     offsets_seen = []
@@ -153,7 +122,7 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
             runway_arrival_diff = int(df.ix[i]['runway_arrival_diff'].days*24*60+df.ix[i]['runway_arrival_diff'].seconds/60)
         if df.ix[i]['gate_arrival_diff'] is not np.nan:
             gate_arrival_diff = int(df.ix[i]['gate_arrival_diff'].days*24*60+df.ix[i]['gate_arrival_diff'].seconds/60)
-        # we are going to write out the id in order to concat later, have to remove before using svm
+        # we are going to write out the id in order to concat later, have to remove before using svm-train
         svm_row.append(str(i))
         # set the class for svm, we are using multi-class binned by 1 minute
         if "svm" in kind: 
@@ -180,18 +149,19 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         else:
             line_count += 1
             continue
-        # this flights data processed
-        new_row, column_count = process_row(kind, df, ignored_columns, unique_cols, line_count, None, df.ix[i], 1)
-        svm_row += new_row
         # this is the scheduled gate departure for the current flight (flight index i)
         initial_departure = df.ix[i]['scheduled_runway_departure']
+        # this flights data processed
+        new_row, column_count = process_row(kind, i, df, events_df, ignored_columns, unique_cols, line_count, None, df.ix[i], 1, initial_departure)
+        svm_row += new_row
         # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
         df_tmp = df_tmp.sort_index(by='scheduled_runway_departure')
         # loop through all the rows in the previous flights
-        for row_count, row in enumerate(df_tmp.values[0:MAX_NUMBER]):
+        for row_count, index in enumerate(df_tmp.index[0:MAX_NUMBER]):
+            row = df_tmp.ix[index]
             cache = False
             offset = column_count# int((row[len(row)-1].days*24*60+row[len(row)-1].seconds/60))*len(df.columns)
-            new_row, column_count = process_row(kind, df_tmp, ignored_columns_previous_flights, unique_cols, line_count, row_count, row, offset, initial_departure=initial_departure)
+            new_row, column_count = process_row(kind, index, df_tmp, events_df, ignored_columns_previous_flights, unique_cols, line_count, row_count, row, offset, initial_departure)
             svm_row += new_row
         num += 1
         if line_count == 0 and "bayesian" in kind and do_header:
@@ -206,21 +176,88 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     
     return num
 
-def process_flight_history_file(kind, path, output_file_name, unique_cols):
-    filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
-    events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
-    asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
-#    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
-    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-#    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-    # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
-#    events_df = pd.read_csv(events_filename, na_values=["MISSING"])
-    header = generate_header(df, ignored_columns)
-    output_file = open(output_file_name, 'w')
-#   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-    num = process_flight_history_data(kind, "bayesian" in kind, df, ignored_columns, header, output_file, unique_cols)
-    output_file.close()
-    return num
+def process_event_row(events_df, index, initial_departure, column_count):
+    events = events_df.ix[index]
+    data = []
+    df_tmp = events.sort_index(by='date_time_recorded')
+    for event_line, event_row in enumerate(df_tmp.values):
+        for event_column, val in enumerate(event_row):
+            if str(val) == "nan":
+                column_count += 1
+                continue
+            if events.columns[event_column] == "date_time_recorded" and str(val) != "nan":
+                diff = minutes_difference(initial_departure, val)
+                data.append("{0}:{1}".format(column_count, diff))
+            elif events.columns[event_column] == "event":
+                pass
+            elif events.columns[event_column] == "data_updated":
+                estimated_gate_arrival = get_estimated_gate_arrival_string(val)
+                if estimated_gate_arrival is not None:
+                    datetime_obj = dateutil.parser.parse(estimated_gate_arrival)
+                    datetime_obj.replace(tzinfo=timezone('PST'))
+                    diff = minutes_difference(initial_departure, datetime_obj)
+                    data.append("{0}:{1}".format(column_count,diff))
+                estimated_runway_arrival = get_estimated_runway_arrival_string(val)
+                if estimated_runway_arrival is not None:
+                    datetime_obj = dateutil.parser.parse(estimated_runway_arrival)
+                    datetime_obj.replace(tzinfo=timezone('PST'))
+                    diff = minutes_difference(initial_departure, datetime_obj)
+                    data.append("{0}:{1}".format(column_count,diff))
+            column_count += 1
+    return data
+
+def process_row(kind, index, df, events_df, ignored_columns, unique_cols, line_count, row_count, row, offset, initial_departure):
+    new_row = []
+    column_count = offset
+    for column, val in enumerate(row):
+        # if column is ignored or the val is missing (nan) then increment and continue
+        if val is np.nan or val is None or str(val) == "nan" or df.columns[column] in ignored_columns:
+            if "svm" in kind:
+                column_count += 1
+            continue 
+                
+        if type(val) is datetime.datetime:
+            if "svm" in kind:
+                new_row.append("{0}:{1}".format(column_count, val.weekday()))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.day))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.hour))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.minute))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.second))
+                column_count += 1
+                diff = minutes_difference(initial_departure, val)
+                new_row.append(diff)
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
+                new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
+                new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
+                new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
+                new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
+        else:
+            if "svm" in kind:
+                val_tmp = val
+                if df.dtypes[column] == "object":
+                    val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
+                new_row.append("{0}:{1}".format(column_count, val_tmp))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
+        # how much earlier it is
+        if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
+            diff = minutes_difference(initial_departure, val)
+            if "svm" in kind:
+                new_row.append("{0}:{1}".format(column_count, diff))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}:{2}".format(column_count, "runway_time_difference", diff))
+    if "bayesian" in kind:
+        column_count += 1
+    event_row = process_event_row(events_df, index, initial_departure, column_count)
+    return new_row, column_count
 
 def generate_header(df, ignored_columns):
     header = []
@@ -287,10 +324,19 @@ def get_base_data():
                         unique_cols[df.columns[column]] = [] # if we have not seen this val before
                     if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
                         unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
-        
+        events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
+        df = pd.read_csv(events_filename, index_col=0, na_values=["MISSING"], parse_dates=[1], date_parser=parse_date_time)
+        for row in df.values:
+            for column, val in enumerate(row):
+                if df.dtypes[column] == "object" and val is not None and val is not np.nan and df.columns[column] not in ignored_columns and type(val) is not datetime.datetime and type(val) is not datetime.timedelta:
+                    # if the column has not been seen before
+                    if df.columns[column] not in unique_cols:
+                        # add it to the unique cols map
+                        unique_cols[df.columns[column]] = [] # if we have not seen this val before
+                    if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
+                        unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
     dict = {"gate_arrival_min":gate_arrival_diff[1], "gate_arrival_max":gate_arrival_diff[0], "runway_arrival_min":runway_arrival_diff[1], "runway_arrival_max":runway_arrival_diff[0]}
     pickle.dump(dict, open("min_maxes.p", "wb"))
-    
     pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     
 

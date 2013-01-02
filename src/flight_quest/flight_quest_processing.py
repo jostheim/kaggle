@@ -84,37 +84,38 @@ def process_row(kind, df, ignored_columns, unique_cols, line_count, row_count, r
     new_row = []
     column_count = offset
     for column, val in enumerate(row):
-        if df.columns[column] == 'scheduled_runway_departure' and (val is np.nan or val is None):
+        # if column is ignored or the val is missing (nan) then increment and continue
+        if val is np.nan or val is None or str(val) == "nan" or df.columns[column] in ignored_columns:
+            if "svm" in kind:
+                column_count += 1
             continue 
-        if df.columns[column] not in ignored_columns:
-            if val is not np.nan and val is not None:
-                if type(val) is datetime.datetime:
-                    if "svm" in kind:
-                        new_row.append("{0}:{1}".format(column_count, val.weekday()))
-                        column_count += 1
-                        new_row.append("{0}:{1}".format(column_count, val.day))
-                        column_count += 1
-                        new_row.append("{0}:{1}".format(column_count, val.hour))
-                        column_count += 1
-                        new_row.append("{0}:{1}".format(column_count, val.minute))
-                        column_count += 1
-                        new_row.append("{0}:{1}".format(column_count, val.second))
-                        column_count += 1
-                    else:
-                        new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
-                        new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
-                        new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
-                        new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
-                        new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
-                else:
-                    if "svm" in kind:
-                        val_tmp = val
-                        if df.dtypes[column] == "object":
-                            val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
-                        new_row.append("{0}:{1}".format(column_count, val_tmp))
-                        column_count += 1
-                    else:
-                        new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
+        if type(val) is datetime.datetime:
+            if "svm" in kind:
+                new_row.append("{0}:{1}".format(column_count, val.weekday()))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.day))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.hour))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.minute))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.second))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
+                new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
+                new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
+                new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
+                new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
+        else:
+            if "svm" in kind:
+                val_tmp = val
+                if df.dtypes[column] == "object":
+                    val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
+                new_row.append("{0}:{1}".format(column_count, val_tmp))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
         # how much earlier it is
         if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
             diff = minutes_difference(initial_departure, val)
@@ -153,10 +154,10 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
         if df.ix[i]['gate_arrival_diff'] is not np.nan:
             gate_arrival_diff = int(df.ix[i]['gate_arrival_diff'].days*24*60+df.ix[i]['gate_arrival_diff'].seconds/60)
         # we are going to write out the id in order to concat later, have to remove before using svm
-        svm_row.append(i)
+        svm_row.append(str(i))
         # set the class for svm, we are using multi-class binned by 1 minute
         if "svm" in kind: 
-            if runway_arrival_diff > 0:
+            if runway_arrival_diff is not np.nan:
                 if "svm" in kind:
                     svm_row.append(str(runway_arrival_diff))
             else:
@@ -205,6 +206,22 @@ def process_flight_history_each(kind, do_header, df, series, biggest, ignored_co
     
     return num
 
+def process_flight_history_file(kind, path, output_file_name, unique_cols):
+    filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
+    events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
+    asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
+    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
+    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+#    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
+    # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
+#    events_df = pd.read_csv(events_filename, na_values=["MISSING"])
+    header = generate_header(df, ignored_columns)
+    output_file = open(output_file_name, 'w')
+#   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
+    num = process_flight_history_data(kind, "bayesian" in kind, df, ignored_columns, header, output_file, unique_cols)
+    output_file.close()
+    return num
+
 def generate_header(df, ignored_columns):
     header = []
     column_count = 1
@@ -222,21 +239,6 @@ def generate_header(df, ignored_columns):
         column_count += 1
     return header
 
-def process_flight_history_file(kind, path, output_file_name, unique_cols):
-    filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
-    events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
-    asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
-    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
-    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-#    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
-    # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
-    events_df = pd.read_csv(events_filename, na_values=["MISSING"])
-    header = generate_header(df, ignored_columns)
-    output_file = open(output_file_name, 'w')
-#   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]
-    num = process_flight_history_data(kind, "bayesian" in kind, df, ignored_columns, header, output_file, unique_cols)
-    output_file.close()
-    return num
 
 def get_base_data():
     unique_cols = {}
@@ -343,10 +345,10 @@ if __name__ == '__main__':
             output_file_name = subdirname + "_" + sys.argv[2] + ".tab"
             if "bayesian" in kind:
                 output_file_name = subdirname + sys.argv[2] + ".csv"
-                if 'multi' in kind:
-                    pool_queue.append([kind, path, output_file_name, unique_columns])
-                else:
-                    num_tmp, num_postive_tmp = process_flight_history_file(kind, path, output_file_name, unique_columns)
+            if 'multi' in kind:
+                pool_queue.append([kind, path, output_file_name, unique_columns])
+            else:
+                num_tmp, num_postive_tmp = process_flight_history_file(kind, path, output_file_name, unique_columns)
             i += 1
         result = pool.map(process_flight_history_file_proxy, pool_queue, 1)
         for num_tmp in result:

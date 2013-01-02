@@ -298,7 +298,7 @@ def process_flight_history_file_proxy(args):
     kind = args[0]
     path= args[1]
     output_file_name = args[2]
-    unique_cols = args[4]
+    unique_cols = args[3]
     return process_flight_history_file(kind, path, output_file_name, unique_cols)
 
 def rebin(input_file, output_file, nbins):

@@ -163,7 +163,9 @@ def process_flight_history_each(kind, do_header, df, events_df, series, biggest,
         # this is the scheduled gate departure for the current flight (flight index i)
         initial_departure = df.ix[i]['scheduled_runway_departure']
         # this flights data processed
-        new_row, column_count = process_row(kind, i, df, events_df, ignored_columns, unique_cols, line_count, None, df.ix[i], 1, initial_departure)
+        new_row, blah = process_row(kind, i, df, events_df, ignored_columns, unique_cols, line_count, None, df.ix[i], 1, initial_departure)
+        # next batch starts at 500
+        column_count = 500
         svm_row += new_row
         # sort the flights with scheduled departures less than this ones, so we are always in some sort of order
         df_tmp = df_tmp.sort_index(by='scheduled_runway_departure')
@@ -173,7 +175,7 @@ def process_flight_history_each(kind, do_header, df, events_df, series, biggest,
             cache = False
             column_count_before = column_count
             offset = column_count# int((row[len(row)-1].days*24*60+row[len(row)-1].seconds/60))*len(df.columns)
-            new_row, column_count = process_row(kind, index, df_tmp, events_df, ignored_columns_previous_flights, unique_cols, line_count, row_count, row, offset, initial_departure)
+            new_row, blah = process_row(kind, index, df_tmp, events_df, ignored_columns_previous_flights, unique_cols, line_count, row_count, row, offset, initial_departure)
             # leave plenty of room if other lines have more columns
             column_count = column_count_before + 500
             svm_row += new_row
@@ -189,6 +191,59 @@ def process_flight_history_each(kind, do_header, df, events_df, series, biggest,
         output_file.write(data)
     
     return num
+
+def process_row(kind, index, df, events_df, ignored_columns, unique_cols, line_count, row_count, row, offset, initial_departure):
+    new_row = []
+    column_count = offset
+    for column, val in enumerate(row):
+        # if column is ignored or the val is missing (nan) then increment and continue
+        if val is np.nan or val is None or str(val) == "nan" or df.columns[column] in ignored_columns:
+            if "svm" in kind:
+                column_count += 1
+            continue 
+                
+        if type(val) is datetime.datetime:
+            if "svm" in kind:
+                new_row.append("{0}:{1}".format(column_count, val.weekday()))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.day))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.hour))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.minute))
+                column_count += 1
+                new_row.append("{0}:{1}".format(column_count, val.second))
+                column_count += 1
+                diff = minutes_difference(initial_departure, val)
+                new_row.append("{0}:{1}".format(column_count, diff))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
+                new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
+                new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
+                new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
+                new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
+        else:
+            if "svm" in kind:
+                val_tmp = val
+#                if df.dtypes[column] == "object":
+#                    val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
+                new_row.append("{0}:{1}".format(column_count, val_tmp))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
+        # how much earlier it is
+        if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
+            diff = minutes_difference(initial_departure, val)
+            if "svm" in kind:
+                new_row.append("{0}:{1}".format(column_count, diff))
+                column_count += 1
+            else:
+                new_row.append("{0}_{1}:{2}".format(column_count, "runway_time_difference", diff))
+    if "bayesian" in kind:
+        column_count += 1
+    event_row = process_event_row(events_df, index, initial_departure, column_count)
+    return new_row, column_count
 
 def process_event_row(events_df, index, initial_departure, column_count):
     events = events_df.ix[index]
@@ -222,58 +277,6 @@ def process_event_row(events_df, index, initial_departure, column_count):
             column_count += 1
     return data
 
-def process_row(kind, index, df, events_df, ignored_columns, unique_cols, line_count, row_count, row, offset, initial_departure):
-    new_row = []
-    column_count = offset
-    for column, val in enumerate(row):
-        # if column is ignored or the val is missing (nan) then increment and continue
-        if val is np.nan or val is None or str(val) == "nan" or df.columns[column] in ignored_columns:
-            if "svm" in kind:
-                column_count += 1
-            continue 
-                
-        if type(val) is datetime.datetime:
-            if "svm" in kind:
-                new_row.append("{0}:{1}".format(column_count, val.weekday()))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.day))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.hour))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.minute))
-                column_count += 1
-                new_row.append("{0}:{1}".format(column_count, val.second))
-                column_count += 1
-                diff = minutes_difference(initial_departure, val)
-                new_row.append(diff)
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}_weekday:{2}".format(column_count, df.columns[column], val.weekday()))
-                new_row.append("{0}_{1}_day:{2}".format(column_count, df.columns[column], val.day))
-                new_row.append("{0}_{1}_hour:{2}".format(column_count, df.columns[column], val.hour))
-                new_row.append("{0}_{1}_minute:{2}".format(column_count, df.columns[column], val.minute))
-                new_row.append("{0}_{1}_second:{2}".format(column_count, df.columns[column], val.second))
-        else:
-            if "svm" in kind:
-                val_tmp = val
-                if df.dtypes[column] == "object":
-                    val_tmp = unique_columns[df.columns[column]].index(val) # otherwise we get the column_count for this val in this column
-                new_row.append("{0}:{1}".format(column_count, val_tmp))
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}:{2}".format(column_count, df.columns[column], val))
-        # how much earlier it is
-        if df.columns[column] == 'scheduled_runway_departure' and initial_departure is not None:
-            diff = minutes_difference(initial_departure, val)
-            if "svm" in kind:
-                new_row.append("{0}:{1}".format(column_count, diff))
-                column_count += 1
-            else:
-                new_row.append("{0}_{1}:{2}".format(column_count, "runway_time_difference", diff))
-    if "bayesian" in kind:
-        column_count += 1
-    event_row = process_event_row(events_df, index, initial_departure, column_count)
-    return new_row, column_count
 
 def generate_header(df, ignored_columns):
     header = []
@@ -366,6 +369,8 @@ def random_forest_classify(input_file):
     input_f = open(input_file, "r")
     x = []
     y = []
+    unique_ys = []
+#    df = pd.read_csv("input_file")
     for line in input_f:
         data_line = line.split(" ")
         x_tmp = {}
@@ -373,9 +378,13 @@ def random_forest_classify(input_file):
             splitter = datum.split(":")
             x_tmp[splitter[0]] = float(splitter[0])
         x.append(x_tmp)
-        y.append(float(data_line[0]))
+        if data_line[0] not in unique_ys:
+            unique_ys.append(int(data_line[0]))
+        y.append(int(data_line[0]))
     targets = np.asarray(y)
     features = pd.DataFrame(x)
+    x = None
+    y = None
     cfr = RandomForestClassifier(
         n_estimators=100,
         max_features=None,
@@ -390,6 +399,7 @@ def random_forest_classify(input_file):
     #run the classifier on each one, aggregating the results into a list
     results = []
     for traincv, testcv in cv:
+        probs = cfr.predict_proba(features[traincv])
         score = cfr.fit(features[traincv], targets[traincv]).score(features[traincv], targets[traincv])
         results.append(score)
 

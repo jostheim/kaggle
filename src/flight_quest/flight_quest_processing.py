@@ -15,6 +15,7 @@ from multiprocessing import Pool
 import pickle
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
 from pytz import timezone
+from sklearn.ensemble import RandomForestClassifier
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -160,8 +161,11 @@ def process_flight_history_each(kind, do_header, df, events_df, series, biggest,
         for row_count, index in enumerate(df_tmp.index[0:MAX_NUMBER]):
             row = df_tmp.ix[index]
             cache = False
+            column_count_before = column_count
             offset = column_count# int((row[len(row)-1].days*24*60+row[len(row)-1].seconds/60))*len(df.columns)
             new_row, column_count = process_row(kind, index, df_tmp, events_df, ignored_columns_previous_flights, unique_cols, line_count, row_count, row, offset, initial_departure)
+            # leave plenty of room if other lines have more columns
+            column_count = column_count_before + 500
             svm_row += new_row
         num += 1
         if line_count == 0 and "bayesian" in kind and do_header:
@@ -278,7 +282,6 @@ def generate_header(df, ignored_columns):
         column_count += 1
     return header
 
-
 def get_base_data():
     unique_cols = {}
     runway_arrival_diff = None
@@ -349,6 +352,30 @@ def process_flight_history_file_proxy(args):
     unique_cols = args[3]
     return process_flight_history_file(kind, path, output_file_name, unique_cols)
 
+def random_forest_classify(input_file):
+    input_f = open(input_file, "r")
+    x = {}
+    y = []
+    for line in input_f:
+        data_line = line.split(" ")
+        for datum in data_line[1:]:
+            splitter = datum.split(":")
+            x[splitter[0]] = splitter[0]
+        y.append(float(data_line[1]))
+    targets = np.asarray(y)
+    features = pd.DataFrame(x)
+    classifier = RandomForestClassifier(
+        n_estimators=100,
+        max_features=None,
+        verbose=2,
+        compute_importances=True,
+        n_jobs=7,
+        random_state=0,
+    )
+    classifier.fit(features, targets)
+    print classifier
+
+
 def rebin(input_file, output_file, nbins, nsamples=None):
     input_f = open(input_file, "r")
     out = open(output_file, "w")
@@ -416,3 +443,5 @@ if __name__ == '__main__':
             rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5]))
         else:
             rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]))
+    if "random_forest" in kind:
+        random_forest_classify(sys.argv[2])

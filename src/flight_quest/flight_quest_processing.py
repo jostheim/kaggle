@@ -18,6 +18,7 @@ from pytz import timezone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
 import logloss
+import scipy as sp
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -29,6 +30,14 @@ ignored_columns = ['actual_gate_arrival','actual_runway_arrival','runway_arrival
 ignored_columns_previous_flights = ['runway_arrival_diff', 'scheduled_runway_diff', 'runway_arrival_differences', 'gate_arrival_diff']
 
 #data_transform_dict = {'published_departure':np.float64}
+
+def llfun(act, pred):
+    epsilon = 1e-15
+    pred = sp.maximum(epsilon, pred)
+    pred = sp.minimum(1-epsilon, pred)
+    ll = np.sqrt(sum((np.pow(act-pred), 2))/float(len(act)))
+    return ll
+
 
 def minutes_difference(datetime1, datetime2):
     diff = datetime1 - datetime2
@@ -382,8 +391,8 @@ def random_forest_classify(input_file):
     #run the classifier on each one, aggregating the results into a list
     results = []
     for traincv, testcv in cv:
-        probas = cfr.fit(features[traincv], targets[traincv]).predict_proba(features[testcv])
-        results.append( logloss.llfun(targets[testcv], [x[1] for x in probas]) )
+        score = cfr.fit(features[traincv], targets[traincv]).score(features[traincv], targets[traincv])
+        results.append(score)
 
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )

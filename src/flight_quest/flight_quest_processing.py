@@ -194,13 +194,15 @@ def process_event_row(events_df, index, initial_departure, column_count):
                 estimated_gate_arrival = get_estimated_gate_arrival_string(val)
                 if estimated_gate_arrival is not None:
                     datetime_obj = dateutil.parser.parse(estimated_gate_arrival)
-                    datetime_obj.replace(tzinfo=timezone('PST'))
+                    datetime_obj = datetime_obj.replace(tzinfo=timezone('US/Pacific'))
+                    datetime_obj = datetime_obj.astimezone(timezone('UTC'))
                     diff = minutes_difference(initial_departure, datetime_obj)
                     data.append("{0}:{1}".format(column_count,diff))
                 estimated_runway_arrival = get_estimated_runway_arrival_string(val)
                 if estimated_runway_arrival is not None:
                     datetime_obj = dateutil.parser.parse(estimated_runway_arrival)
-                    datetime_obj.replace(tzinfo=timezone('PST'))
+                    datetime_obj = datetime_obj.replace(tzinfo=timezone('US/Pacific'))
+                    datetime_obj = datetime_obj.astimezone(timezone('UTC'))
                     diff = minutes_difference(initial_departure, datetime_obj)
                     data.append("{0}:{1}".format(column_count,diff))
             column_count += 1
@@ -347,7 +349,7 @@ def process_flight_history_file_proxy(args):
     unique_cols = args[3]
     return process_flight_history_file(kind, path, output_file_name, unique_cols)
 
-def rebin(input_file, output_file, nbins):
+def rebin(input_file, output_file, nbins, nsamples=None):
     input_f = open(input_file, "r")
     out = open(output_file, "w")
     data = []
@@ -368,8 +370,12 @@ def rebin(input_file, output_file, nbins):
             new_bins.append(bins[digit-1])
         else:
             new_bins.append((bins[digit-1] + bins[digit])/2.0)
+    prob = 1.0
+    if nsamples is not None:
+        prob = float(nsamples)/float(len(data))
     for i, data_columns in enumerate(data):
-        out.write("{0} {1}".format(int(new_bins[i]), " ".join(data_columns)))
+        if np.random.random() <= prob:
+            out.write("{0} {1}".format(int(new_bins[i]), " ".join(data_columns)))
     input_f.close()
     out.close()
  
@@ -406,4 +412,7 @@ if __name__ == '__main__':
             num += num_tmp
         print "num: {0}".format(num)
     if "rebin" in kind:
-        rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]))
+        if len(sys.argv) > 5:
+            rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5]))
+        else:
+            rebin(sys.argv[2], sys.argv[3], int(sys.argv[4]))

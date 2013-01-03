@@ -360,7 +360,9 @@ def random_forest_classify(input_file):
         data_line = line.split(" ")
         for datum in data_line[1:]:
             splitter = datum.split(":")
-            x[splitter[0]] = float(splitter[0])
+            if splitter[0] not in x:
+                x[splitter[0]] = []
+            x[splitter[0]].append(float(splitter[0]))
         y.append(float(data_line[0]))
     targets = np.asarray(y)
     features = pd.DataFrame(x)

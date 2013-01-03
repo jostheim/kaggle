@@ -16,6 +16,8 @@ import pickle
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
 from pytz import timezone
 from sklearn.ensemble import RandomForestClassifier
+from sklearn import cross_validation
+import logloss
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -366,7 +368,7 @@ def random_forest_classify(input_file):
         y.append(float(data_line[0]))
     targets = np.asarray(y)
     features = pd.DataFrame(x)
-    classifier = RandomForestClassifier(
+    cfr = RandomForestClassifier(
         n_estimators=100,
         max_features=None,
         verbose=2,
@@ -374,8 +376,17 @@ def random_forest_classify(input_file):
         n_jobs=7,
         random_state=0,
     )
-    classifier.fit(features, targets)
-    print classifier
+    cv = cross_validation.KFold(len(features), k=5, indices=False)
+
+    #iterate through the training and test cross validation segments and
+    #run the classifier on each one, aggregating the results into a list
+    results = []
+    for traincv, testcv in cv:
+        probas = cfr.fit(features[traincv], targets[traincv]).predict_proba(features[testcv])
+        results.append( logloss.llfun(targets[testcv], [x[1] for x in probas]) )
+
+    #print out the mean of the cross-validated results
+    print "Results: " + str( np.array(results).mean() )
 
 
 def rebin(input_file, output_file, nbins, nsamples=None):

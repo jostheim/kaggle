@@ -17,7 +17,6 @@ from flight_history_events import get_estimated_gate_arrival_string, get_estimat
 from pytz import timezone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
-import logloss
 import scipy as sp
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'

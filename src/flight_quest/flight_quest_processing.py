@@ -361,7 +361,7 @@ def random_forest_classify(input_file):
         for datum in data_line[1:]:
             splitter = datum.split(":")
             x[splitter[0]] = splitter[0]
-        y.append(float(data_line[1]))
+        y.append(float(data_line[0]))
     targets = np.asarray(y)
     features = pd.DataFrame(x)
     classifier = RandomForestClassifier(

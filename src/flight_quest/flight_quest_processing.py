@@ -354,15 +354,15 @@ def process_flight_history_file_proxy(args):
 
 def random_forest_classify(input_file):
     input_f = open(input_file, "r")
-    x = {}
+    x = []
     y = []
     for line in input_f:
         data_line = line.split(" ")
+        x_tmp = {}
         for datum in data_line[1:]:
             splitter = datum.split(":")
-            if splitter[0] not in x:
-                x[splitter[0]] = []
-            x[splitter[0]].append(float(splitter[0]))
+            x_tmp[splitter[0]] = float(splitter[0])
+        x.append(x_tmp)
         y.append(float(data_line[0]))
     targets = np.asarray(y)
     features = pd.DataFrame(x)

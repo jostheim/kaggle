@@ -83,12 +83,15 @@ def parse_date_time(val):
 def process_flight_history_file(kind, path, output_file_name, unique_cols):
     filename = '{0}/FlightHistory/flighthistory.csv'.format(path)
     events_filename =  '{0}/FlightHistory/flighthistoryevents.csv'.format(path)
+    print events_filename
     asdi_filename =  '{0}/ASDI/asdiflightplan.csv'.format(path)
 #    test_filename = '{0}/FlightHistory/flighthistoryevents.csv'.format(test_path)
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
 #    df_test = pd.read_csv(test_filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=["MISSING"])
     # still confused, but we may want to remove all data in the test set (df_test) from the training set (df)
-    events_df = pd.read_csv(events_filename, index_col=0, na_values=["MISSING"], parse_dates=[1], date_parser=parse_date_time)
+    events_df = pd.read_csv(events_filename, na_values=["MISSING"], parse_dates=[1], date_parser=parse_date_time)
+    new_df = pd.merge(df, events_df, how='left', left_index=True, right_index=True)
+    print new_df.columns
     header = generate_header(df, ignored_columns)
     output_file = open(output_file_name, 'w')
 #   ignored_columns = ["actual_gate_departure", "actual_gate_arrival", "actual_runway_departure", "actual_runway_arrival", "actual_aircraft_type", "runway_arrival_differences"]

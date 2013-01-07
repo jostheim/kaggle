@@ -24,15 +24,15 @@ def get_flight_history():
 
 def get_metar(prefix):
     filename = "{0}/{1}/{2}/metar/flightstats_metarreports_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    metar_df = pd.read_csv(filename, index_col=['metar_reports_id'], parse_dates=[2], date_parser=parse_date_time, na_values=["MISSING"])
+    metar_df = pd.read_csv(filename, index_col=['metar_reports_id'], parse_dates=[2], date_parser=parse_date_time, na_values=na_values)
     filename = "{0}/{1}/{2}/metar/flightstats_metarpresentconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    metar_present_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=["MISSING"])
+    metar_present_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_present_conditions_df['id'] 
     filename = "{0}/{1}/{2}/metar/flightstats_metarrunwaygroups_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    metar_runway_groups_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=["MISSING"])
+    metar_runway_groups_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_runway_groups_df['id'] 
     filename = "{0}/{1}/{2}/metar/flightstats_metarskyconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    metar_sky_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=["MISSING"])
+    metar_sky_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_sky_conditions_df['id'] 
     metar_join = metar_present_conditions_df.join([metar_runway_groups_df, metar_sky_conditions_df])
     metar_df = metar_df.join(metar_join)
@@ -55,6 +55,81 @@ def get_metar(prefix):
     tmp_df = pd.DataFrame(groups)
     tmp_df.set_index('weather_station_code', inplace=True, verify_integrity=True)
     return tmp_df
+
+def get_fbwind(prefix):
+    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindreport.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    fbwindreport_df = pd.read_csv(filename, parse_dates=[1], date_parser=parse_date_time, na_values=na_values)
+    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindairport.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    fbwindairport_df = pd.read_csv(filename, na_values=na_values)
+    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwind.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    fbwind_df = pd.read_csv(filename, na_values=na_values)
+    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindaltitude.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    fbwindaltitude_df = pd.read_csv(filename, na_values=na_values)
+    grouped = fbwindaltitude_df.groupby('fbwindreportid')
+    groups = []
+    i = 0
+    for name, group in grouped:
+        d = {}
+    #   print "switching"
+        d = {'fbwindreportid':int(name)}
+        group = group.sort_index(by="ordinal")
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "fbwindreportid" and group.columns[j] != "ordinal":
+                    d["{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(d)
+        i += 1
+    fbwindaltitude_flattened_df = pd.DataFrame(groups)
+    grouped = fbwind_df.groupby('fbwindairportid')
+    groups = []
+    i = 0
+    for name, group in grouped:
+        d = {}
+    #   print "switching"
+        d = {'fbwindairportid':int(name)}
+        group = group.sort_index(by="ordinal")
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "fbwindairportid" and group.columns[j] != "ordinal":
+                    d["{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(d)
+        i += 1
+    fbwind_flattened_df = pd.DataFrame(groups)
+
+    fbwind_joined = pd.merge(fbwindairport_df, fbwind_flattened_df, how="left", left_on="fbwindairportid", right_on="fbwindairportid")
+    print fbwind_joined.values
+    
+    fbwindreport_df_joined = pd.merge(fbwindreport_df, fbwindaltitude_flattened_df, how="left", left_on="fbwindreportid", right_on="fbwindreportid")
+    fbwindreport_df_joined.set_index("fbwindreportid", inplace=True, verify_integrity=True)
+    
+    fb_wind_df = pd.merge(fbwind_joined, fbwindreport_df_joined, how="left", left_on='fbwindreportid', right_index=True)
+    del fb_wind_df['fbwindreportid']
+    del fb_wind_df['fbwindairportid']
+    
+    grouped = fbwind_df.groupby('airportcode')
+    groups = []
+    i = 0
+    for name, group in grouped:
+        d = {}
+    #   print "switching"
+        d = {'airportcode':name}
+        group = group.sort_index(by="createdutc")
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "airportcode":
+                    d["{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(d)
+        i += 1
+    fbwind_df = pd.DataFrame(groups)
+    fbwind_df.set_index("airportcode", inplace=True, verify_integrity=True)
+    new_col_names = []
+    for col in fb_wind_df.columns:
+        new_col_names.append("{0}_{1}".format(prefix, col))
+    fb_wind_df.columns = new_col_names
+    return fb_wind_df
 
 def get_flight_history_events():
     events_filename = "{0}/{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
@@ -383,6 +458,10 @@ def build_joined_data(subdirname):
         metar_departure = get_metar("departure")
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+#        fbwind_arrival = get_fbwind("arrival")
+#        fbwind_departure = get_fbwind("departure")
+#        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_on="airport_code")
+#        df = pd.merge(df, fbwind_departure, how="left", left_on="arrival_airport_code", right_on="airport_code")
         print df.columns
         pd.save(df, "{0}_joined.p".format(subdirname))
     return df

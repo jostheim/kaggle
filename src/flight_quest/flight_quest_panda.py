@@ -384,7 +384,7 @@ def build_joined_data(subdirname):
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
         print df.columns
-        pd.save(df, "{{0}_joined.p".format(subdirname))
+        pd.save(df, "{0}_joined.p".format(subdirname))
     return df
 
 def build_joined_data_proxy(args):

@@ -157,12 +157,7 @@ def get_asdi_merged():
         i += 1
     tmp_df = pd.DataFrame(groups)
     tmp_df.set_index('asdiflightplanid', inplace=True, verify_integrity=True)
-    print tmp_df.columns
-    print tmp_df.values
-    print tmp_df.index
     asdi_merged_df = pd.merge(asdi_root_df, tmp_df, how="left", left_index=True, right_index=True)
-    print asdi_merged_df.columns
-    print asdi_merged_df.values
     return asdi_merged_df
 
 def get_atscc_deicing():
@@ -228,8 +223,7 @@ def get_atscc_ground_delay():
         i += 1
     atsccgrounddelayartccs_tmp_df = pd.DataFrame(groups)
     atsccgrounddelayartccs_tmp_df.set_index('ground_delay_program_id', inplace=True, verify_integrity=True)
-    print atsccgrounddelayartccs_tmp_df.columns
-    atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_merged_df, atsccgrounddelayartccs_tmp_df, how="left", left_index=True, right_index=True)
+    #atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_merged_df, atsccgrounddelayartccs_tmp_df, how="left", left_index=True, right_index=True)
     end_time = []
     for ix,row in atsccgrounddelay_merged_df.iterrows():
         end = row['effective_end_time']
@@ -318,7 +312,7 @@ def get_for_flights(df):
             if len(departure_grounddelay) > 0:
                 departure_grounddelay['flight_history_id'] = ix
                 departure_ground_delays.append(departure_grounddelay)
-                print departure_grounddelay
+                #print departure_grounddelay
     
             tmp = atsccdelay_df[atsccdelay_df['airport_code'] == row['departure_airport_code']]
             tmp = tmp[tmp['start_time'] <= row['scheduled_gate_departure']]
@@ -371,6 +365,7 @@ if __name__ == '__main__':
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         date_prefix = subdirname
+        print "Working on {0}".format(subdirname)
         df = get_flight_history()
         events = get_flight_history_events()
         asdi_disposition = get_asdi_disposition()

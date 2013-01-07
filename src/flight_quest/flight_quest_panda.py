@@ -364,26 +364,33 @@ def process_data(df):
 if __name__ == '__main__':
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        df = None
         date_prefix = subdirname
-        print "Working on {0}".format(subdirname)
-        df = get_flight_history()
-        events = get_flight_history_events()
-        asdi_disposition = get_asdi_disposition()
-        asdi_merged = get_asdi_merged()
-        joiners = [events, asdi_disposition, asdi_merged]
-        per_flights = get_for_flights(df)
-        joiners += per_flights
-        df = df.join(joiners)
-        metar_arrival = get_metar("arrival")
-        metar_departure = get_metar("departure")
-        df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
-        df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-        print df.columns
+        try:
+            df = pd.load("{0}_joined.p".format(subdirname))
+        except Exception as e:
+            pass
+        if df is None:
+            print "Working on {0}".format(subdirname)
+            df = get_flight_history()
+            events = get_flight_history_events()
+            asdi_disposition = get_asdi_disposition()
+            asdi_merged = get_asdi_merged()
+            joiners = [events, asdi_disposition, asdi_merged]
+            per_flights = get_for_flights(df)
+            joiners += per_flights
+            df = df.join(joiners)
+            metar_arrival = get_metar("arrival")
+            metar_departure = get_metar("departure")
+            df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
+            df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+            print df.columns
+            pd.save(df, "{{0}_joined.p".format(subdirname))
         if all_dfs is None:
             all_dfs = df
         else:
             all_dfs = all_dfs.append(df)
-    pd.save(all_dfs, "{all_joined.p".format(subdirname))
+    pd.save(all_dfs, "all_joined.p")
     all_dfs.to_csv("all_joined.csv")
     
     

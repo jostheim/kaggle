@@ -8,6 +8,7 @@ import numpy as np
 import types
 from flight_quest_processing import parse_date_time
 import datetime
+from multiprocessing import Pool
 import os, sys
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
@@ -360,37 +361,48 @@ def process_data(df):
     df['gate_arrival_diff'] = diffs_gate
     for column, series in df.iteritems():
         pass
-                
+
+def build_joined_data(subdirname):
+    df = None
+    date_prefix = subdirname
+    try:
+        df = pd.load("{0}_joined.p".format(subdirname))
+    except Exception as e:
+        df = None
+    if df is None:
+        print "Working on {0}".format(subdirname)
+        df = get_flight_history()
+        events = get_flight_history_events()
+        asdi_disposition = get_asdi_disposition()
+        asdi_merged = get_asdi_merged()
+        joiners = [events, asdi_disposition, asdi_merged]
+        per_flights = get_for_flights(df)
+        joiners += per_flights
+        df = df.join(joiners)
+        metar_arrival = get_metar("arrival")
+        metar_departure = get_metar("departure")
+        df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
+        df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+        print df.columns
+        pd.save(df, "{{0}_joined.p".format(subdirname))
+    return df
+
+def build_joined_data_proxy(args):
+    subdirname = args[0]
+    return build_joined_data(subdirname)
+
 if __name__ == '__main__':
     all_dfs = None
+    pool_queue = []
+    pool = Pool(processes=8)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-        df = None
-        date_prefix = subdirname
-        try:
-            df = pd.load("{0}_joined.p".format(subdirname))
-        except Exception as e:
-            pass
-        if df is None:
-            print "Working on {0}".format(subdirname)
-            df = get_flight_history()
-            events = get_flight_history_events()
-            asdi_disposition = get_asdi_disposition()
-            asdi_merged = get_asdi_merged()
-            joiners = [events, asdi_disposition, asdi_merged]
-            per_flights = get_for_flights(df)
-            joiners += per_flights
-            df = df.join(joiners)
-            metar_arrival = get_metar("arrival")
-            metar_departure = get_metar("departure")
-            df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
-            df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-            print df.columns
-            pd.save(df, "{{0}_joined.p".format(subdirname))
+        pool_queue.append([subdirname])
+    results = pool.map(build_joined_data_proxy, pool_queue, 1)
+    for df in results:
         if all_dfs is None:
             all_dfs = df
         else:
             all_dfs = all_dfs.append(df)
     pd.save(all_dfs, "all_joined.p")
     all_dfs.to_csv("all_joined.csv")
-    
-    
+

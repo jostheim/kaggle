@@ -6,7 +6,7 @@ Created on Jan 6, 2013
 import pandas as pd
 import numpy as np
 import types
-from flight_quest_processing import parse_date_time
+import dateutil
 import datetime
 from multiprocessing import Pool
 import os, sys
@@ -17,6 +17,19 @@ data_rev_prefix = 'InitialTrainingSet_rev1'
 date_prefix = '2012_11_12'
 data_test_rev_prefix = 'SampleTestSet'
 na_values = ["MISSING", "HIDDEN"]
+
+def parse_date_time(val):
+    if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
+        #'2012-11-12 17:30:00+00:00
+        try:
+            return dateutil.parser.parse(val)
+        except ValueError as e:
+#            print e
+            pass
+            return np.nan
+    else:
+        return np.nan
+#        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def get_flight_history():
     filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
@@ -430,22 +443,6 @@ def get_for_flights(df):
     departure_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
-def handle_datetime(x, initial):
-    pass
-
-def process_data(df):
-    diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
-    df['runway_arrival_diff'] = diffs
-    diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-    df['gate_arrival_diff'] = diffs_gate
-    for column, series in df.iteritems():
-        if "id" in column:
-            print "removing id column: {0}".format(column)
-            del df[column]
-        val = series.head(1)
-        if type(val) is datetime.datetime:
-            new_column = df[column].copy()
-            #new_column.apply(handle_datetime, args=(initial))
 
 def build_joined_data(subdirname, force=False):
     df = None
@@ -482,6 +479,27 @@ def build_joined_data_proxy(args):
     subdirname = args[0]
     return build_joined_data(subdirname)
 
+def handle_datetime(x, initial):
+    pass
+
+def process_into_features(df):
+    diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
+    df['runway_arrival_diff'] = diffs
+    diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+    df['gate_arrival_diff'] = diffs_gate
+    for column, series in df.iteritems():
+        if "id" in column:
+            print "removing id column: {0}".format(column)
+            del df[column]
+        # I hate this, but I need to figure out the type and pandas has them as all objects
+        dtype = None
+        for ix, val in series.iteritems():
+            if val is not np.nan:
+                dtype = type(val)
+                break
+        if dtype is datetime.datetime:
+            df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday())
+
 if __name__ == '__main__':
     kind = sys.argv[1]
     if kind == "build":
@@ -495,7 +513,10 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             df = build_joined_data(subdirname, True)
-            rows = random.sample(df.index, len(df.index)/2)
+            sample_size = len(df.index)/2
+            if len(sys.argv) > 2:
+                sample_size = int(sys.argv)
+            rows = random.sample(df.index, sample_size)
             df = df.ix[rows]
             if all_dfs is None:
                 all_dfs = df
@@ -503,4 +524,7 @@ if __name__ == '__main__':
                 all_dfs = all_dfs.append(df)
         pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
+    elif kind == "process":
+        all_df = pd.load("all_joined.p")
+        process_into_features(all_df)
 

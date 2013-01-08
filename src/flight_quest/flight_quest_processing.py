@@ -18,6 +18,7 @@ from pytz import timezone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
 import scipy as sp
+import pandas.lib as lib
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -42,17 +43,22 @@ def minutes_difference(datetime1, datetime2):
     diff = datetime1 - datetime2
     return diff.days*24*60+diff.seconds/60
 
+def convert_dtypes(dtypes, date_cols):
+    for col in date_cols:
+        dtypes[col] = np.datetime64
+
 def parse_date_time(val):
     if str(val).lower().strip() != "MISSING" and str(val).lower().strip() != "nan":
         #'2012-11-12 17:30:00+00:00
         try:
-            return dateutil.parser.parse(val)
+            return np.datetime64(dateutil.parser.parse(val))
         except ValueError as e:
 #            print e
             pass
     else:
-        return None
+        return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
+
     
 
 #0 airline_code                         25413  non-null values

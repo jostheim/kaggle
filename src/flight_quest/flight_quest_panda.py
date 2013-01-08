@@ -492,7 +492,7 @@ if __name__ == '__main__':
     elif kind == "concat":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            df = build_joined_data(subdirname)
+            df = build_joined_data(subdirname, True)
             if all_dfs is None:
                 all_dfs = df
             else:

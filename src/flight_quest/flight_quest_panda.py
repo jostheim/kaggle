@@ -11,6 +11,8 @@ import datetime
 from multiprocessing import Pool
 import os, sys
 import random
+from pytz import timezone
+from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -145,9 +147,36 @@ def get_fbwind(prefix):
     fb_wind_df.columns = new_col_names
     return fb_wind_df
 
+def parse_estimated_gate_arrival(val):
+    if val is None or val is np.nan or str(val) == "nan":
+        return None
+    estimated_gate_arrival = get_estimated_gate_arrival_string(val)
+    if estimated_gate_arrival is not None:
+        datetime_obj = dateutil.parser.parse(estimated_gate_arrival)
+        datetime_obj = datetime_obj.replace(tzinfo=timezone('US/Pacific'))
+        datetime_obj = datetime_obj.astimezone(timezone('UTC'))
+        return datetime_obj
+    return None
+
+def parse_estimated_runway_arrival(val):
+    if val is None or val is np.nan or str(val) == "nan":
+        return None
+    estimated_runway_arrival = get_estimated_runway_arrival_string(val)
+    if estimated_runway_arrival is not None:
+        datetime_obj = dateutil.parser.parse(estimated_runway_arrival)
+        datetime_obj = datetime_obj.replace(tzinfo=timezone('US/Pacific'))
+        datetime_obj = datetime_obj.astimezone(timezone('UTC'))
+        return datetime_obj
+    return None
+
+
 def get_flight_history_events():
     events_filename = "{0}/{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
     events_df = pd.read_csv(events_filename, na_values=na_values, parse_dates=[1], date_parser=parse_date_time)
+    events_df["estimated_gate_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_gate_arrival(x)) 
+    print events_df["estimated_gate_arrival"].dropna()
+    events_df["estimated_runway_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_runway_arrival(x)) 
+    print events_df["estimated_runway_arrival"].dropna()
     grouped = events_df.groupby("flight_history_id")
     groups = []
     i = 0
@@ -482,15 +511,19 @@ def build_joined_data_proxy(args):
 def handle_datetime(x, initial):
     pass
 
+def minutes_difference(datetime1, datetime2):
+    diff = datetime1 - datetime2
+    return diff.days*24*60+diff.seconds/60
+
 def process_into_features(df):
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
     for column, series in df.iteritems():
-        if "id" in column:
-            print "removing id column: {0}".format(column)
-            del df[column]
+#        if "id" in column:
+#            print "removing id column: {0}".format(column)
+#            del df[column]
         # I hate this, but I need to figure out the type and pandas has them as all objects
         dtype = None
         for ix, val in series.iteritems():
@@ -498,16 +531,36 @@ def process_into_features(df):
                 dtype = type(val)
                 break
         if dtype is datetime.datetime:
-            df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday())
+            df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else None)
+            df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else None)
+            df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else None)
+            df['{0}_minute'.format(column)] = df[column].apply(lambda x: x.minute if type(x) is datetime.datetime else None)
+            # get the diff relative to a zero-point
+            df['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series
+            # set the diff to be in minutes
+            df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.datetime else None)
+            # delete the original 
+            if column != "scheduled_runway_departure":
+                del df[column]
+        elif dtype is str:
+            del df[column]
+        else:
+            print column, dtype, df.dtypes[column]
+    del df["scheduled_runway_departure"]
+    for i in xrange(len(df.columns)):
+        print df.columns[i], df.dtypes[i]
 
 if __name__ == '__main__':
     kind = sys.argv[1]
-    if kind == "build":
+    if kind == "build_multi":
         pool_queue = []
         pool = Pool(processes=8)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             pool_queue.append([subdirname])
         results = pool.map(build_joined_data_proxy, pool_queue, 1)
+    elif kind == "build":
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            build_joined_data(subdirname)
     elif kind == "concat":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:

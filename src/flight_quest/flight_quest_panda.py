@@ -515,7 +515,7 @@ if __name__ == '__main__':
             df = build_joined_data(subdirname, True)
             sample_size = len(df.index)/2
             if len(sys.argv) > 2:
-                sample_size = int(sys.argv)
+                sample_size = int(sys.argv[2])
             rows = random.sample(df.index, sample_size)
             df = df.ix[rows]
             if all_dfs is None:

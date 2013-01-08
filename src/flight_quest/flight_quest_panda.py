@@ -482,17 +482,21 @@ def build_joined_data_proxy(args):
     return build_joined_data(subdirname)
 
 if __name__ == '__main__':
-    all_dfs = None
-    pool_queue = []
-    pool = Pool(processes=4)
-    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-        pool_queue.append([subdirname])
-    results = pool.map(build_joined_data_proxy, pool_queue, 1)
-#    for df in results:
-#        if all_dfs is None:
-#            all_dfs = df
-#        else:
-#            all_dfs = all_dfs.append(df)
-#    pd.save(all_dfs, "all_joined.p")
-#    all_dfs.to_csv("all_joined.csv")
+    kind = sys.argv[1]
+    if kind == "build":
+        pool_queue = []
+        pool = Pool(processes=8)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            pool_queue.append([subdirname])
+        results = pool.map(build_joined_data_proxy, pool_queue, 1)
+    elif kind == "concat":
+        all_dfs = None
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            df = build_joined_data(subdirname)
+            if all_dfs is None:
+                all_dfs = df
+            else:
+                all_dfs = all_dfs.append(df)
+        pd.save(all_dfs, "all_joined.p")
+        all_dfs.to_csv("all_joined.csv")
 

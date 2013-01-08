@@ -174,9 +174,7 @@ def get_flight_history_events():
     events_filename = "{0}/{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
     events_df = pd.read_csv(events_filename, na_values=na_values, parse_dates=[1], date_parser=parse_date_time)
     events_df["estimated_gate_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_gate_arrival(x)) 
-    print events_df["estimated_gate_arrival"].dropna()
     events_df["estimated_runway_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_runway_arrival(x)) 
-    print events_df["estimated_runway_arrival"].dropna()
     grouped = events_df.groupby("flight_history_id")
     groups = []
     i = 0
@@ -285,7 +283,7 @@ def get_atscc_deicing():
     end_time = []
     for ix,row in atsccdeicing_df.iterrows():
         end = row['end_time']
-        if end is None or (row['invalidated_time'] is not None and row['invalidated_time'] < end):
+        if (end is None or end is np.nan ) or (row['invalidated_time'] is not None and row['invalidated_time'] is not np.nan and row['invalidated_time'] < end):
             end = row['invalidated_time']
         end_time.append(end)
     atsccdeicing_df['actual_end_time'] = pd.Series(end_time, index=atsccdeicing_df.index)
@@ -297,7 +295,7 @@ def get_atscc_delay():
     end_time = []
     for ix,row in atsccdelay_df.iterrows():
         end = row['end_time']
-        if end is None or (row['invalidated_time'] is not None and row['invalidated_time'] < end):
+        if (end is None or end is np.nan) or (row['invalidated_time'] is not None and row['invalidated_time'] is not np.nan and row['invalidated_time'] < end):
             end = row['invalidated_time']
         end_time.append(end)
     atsccdelay_df['actual_end_time'] = pd.Series(end_time, index=atsccdelay_df.index)
@@ -346,9 +344,9 @@ def get_atscc_ground_delay():
     end_time = []
     for ix,row in atsccgrounddelay_merged_df.iterrows():
         end = row['effective_end_time']
-        if end is None or (row['invalidated_time'] is not None and row['invalidated_time'] < end):
+        if (end is None or end is np.nan) or (row['invalidated_time'] is not None and row['invalidated_time'] is not np.nan and row['invalidated_time'] < end):
             end = row['invalidated_time']
-        if end is None or (row['cancelled_time'] is not None and row['cancelled_time'] < end):
+        if (end is None or end is np.nan) or (row['cancelled_time'] is not None and row['cancelled_time'] is not np.nan and row['cancelled_time'] < end):
             end = row['cancelled_time']
         end_time.append(end)
     atsccgrounddelay_merged_df['actual_end_time'] = pd.Series(end_time, index=atsccgrounddelay_merged_df.index)
@@ -531,14 +529,14 @@ def process_into_features(df):
                 dtype = type(val)
                 break
         if dtype is datetime.datetime:
-            df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else None)
-            df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else None)
-            df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else None)
-            df['{0}_minute'.format(column)] = df[column].apply(lambda x: x.minute if type(x) is datetime.datetime else None)
+            df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else np.nan)
+            df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else np.nan)
+            df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else np.nan)
+            df['{0}_minute'.format(column)] = df[column].apply(lambda x: x.minute if type(x) is datetime.datetime else np.nan)
             # get the diff relative to a zero-point
             df['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series
             # set the diff to be in minutes
-            df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.datetime else None)
+            df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.datetime else np.nan)
             # delete the original 
             if column != "scheduled_runway_departure":
                 del df[column]

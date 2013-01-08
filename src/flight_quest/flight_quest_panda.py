@@ -494,6 +494,8 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             df = build_joined_data(subdirname, True)
+            rows = np.random.sample(df.index, len(df)/2)
+            df = df.ix[rows]
             if all_dfs is None:
                 all_dfs = df
             else:

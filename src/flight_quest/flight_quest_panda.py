@@ -446,9 +446,11 @@ def process_data(df):
             new_column = df[column].copy()
             #new_column.apply(handle_datetime, args=(initial))
 
-def build_joined_data(subdirname):
+def build_joined_data(subdirname, force=False):
     df = None
     date_prefix = subdirname
+    if os.path.isfile("{0}_joined.p".format(subdirname)) and not force:
+        return None
     try:
         df = pd.load("{0}_joined.p".format(subdirname))
     except Exception as e:

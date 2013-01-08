@@ -482,7 +482,7 @@ def build_joined_data_proxy(args):
 if __name__ == '__main__':
     all_dfs = None
     pool_queue = []
-    pool = Pool(processes=8)
+    pool = Pool(processes=4)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         pool_queue.append([subdirname])
     results = pool.map(build_joined_data_proxy, pool_queue, 1)

@@ -429,13 +429,22 @@ def get_for_flights(df):
     departure_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
+def handle_datetime(x, initial):
+    pass
+
 def process_data(df):
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
     for column, series in df.iteritems():
-        pass
+        if "id" in column:
+            print "removing id column: {0}".format(column)
+            del df[column]
+        val = series.head(1)
+        if type(val) is datetime.datetime:
+            new_column = df[column].copy()
+            #new_column.apply(handle_datetime, args=(initial))
 
 def build_joined_data(subdirname):
     df = None
@@ -477,11 +486,11 @@ if __name__ == '__main__':
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         pool_queue.append([subdirname])
     results = pool.map(build_joined_data_proxy, pool_queue, 1)
-    for df in results:
-        if all_dfs is None:
-            all_dfs = df
-        else:
-            all_dfs = all_dfs.append(df)
-    pd.save(all_dfs, "all_joined.p")
-    all_dfs.to_csv("all_joined.csv")
+#    for df in results:
+#        if all_dfs is None:
+#            all_dfs = df
+#        else:
+#            all_dfs = all_dfs.append(df)
+#    pd.save(all_dfs, "all_joined.p")
+#    all_dfs.to_csv("all_joined.csv")
 

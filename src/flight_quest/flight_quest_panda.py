@@ -471,7 +471,7 @@ def get_for_flights(df):
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def build_joined_data(subdirname, force=False):
+def get_joined_data(subdirname, force=False):
     df = None
     date_prefix = subdirname
     if os.path.isfile("{0}_joined.p".format(subdirname)) and not force:
@@ -502,9 +502,9 @@ def build_joined_data(subdirname, force=False):
         pd.save(df, "{0}_joined.p".format(subdirname))
     return df
 
-def build_joined_data_proxy(args):
+def get_joined_data_proxy(args):
     subdirname = args[0]
-    return build_joined_data(subdirname)
+    return get_joined_data(subdirname)
 
 def handle_datetime(x, initial):
     pass
@@ -519,8 +519,8 @@ def process_into_features(df):
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
     for column, series in df.iteritems():
-#        if "id" in column:
-#            print "removing id column: {0}".format(column)
+        if "id" in column:
+            print "removing id column: {0}".format(column)
 #            del df[column]
         # I hate this, but I need to figure out the type and pandas has them as all objects
         dtype = None
@@ -536,7 +536,7 @@ def process_into_features(df):
             # get the diff relative to a zero-point
             df['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series
             # set the diff to be in minutes
-            df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.datetime else np.nan)
+            df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
             # delete the original 
             if column != "scheduled_runway_departure":
                 del df[column]
@@ -547,6 +547,19 @@ def process_into_features(df):
     del df["scheduled_runway_departure"]
     for i in xrange(len(df.columns)):
         print df.columns[i], df.dtypes[i]
+    return df
+
+def get_unique_values_for_categorical_columns(df):
+    for row in df.values:
+        for column, val in enumerate(row):
+            if df.dtypes[column] == "object" and val is not None and val is not np.nan and df.columns[column] and type(val) is not datetime.datetime and type(val) is not datetime.timedelta:
+                # if the column has not been seen before
+                if df.columns[column] not in unique_cols:
+                    # add it to the unique cols map
+                    unique_cols[df.columns[column]] = [] # if we have not seen this val before
+                if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
+                    unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
+    return unique_cols
 
 if __name__ == '__main__':
     kind = sys.argv[1]
@@ -555,15 +568,16 @@ if __name__ == '__main__':
         pool = Pool(processes=8)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             pool_queue.append([subdirname])
-        results = pool.map(build_joined_data_proxy, pool_queue, 1)
+        results = pool.map(get_joined_data_proxy, pool_queue, 1)
+        pool.terminate()
     elif kind == "build":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            build_joined_data(subdirname)
+            get_joined_data(subdirname)
     elif kind == "concat":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
-            df = build_joined_data(subdirname, True)
+            df = get_joined_data(subdirname, True)
             sample_size = len(df.index)/2
             if len(sys.argv) > 2:
                 sample_size = int(sys.argv[2])
@@ -578,4 +592,9 @@ if __name__ == '__main__':
     elif kind == "process":
         all_df = pd.load("all_joined.p")
         process_into_features(all_df)
+    elif kind == "uniques":
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            print "Working on {0}".format(subdirname)
+            df = get_joined_data(subdirname, True)
+            unique_cols = get_unique_values_for_categorical_columns(df)
 

@@ -568,7 +568,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
             dtype = None
             type_val = None
             for ix, type_val in series.iteritems():
-                if val is not np.nan:
+                if type_val is not np.nan:
                     dtype = type(type_val)
                     break
             if series.dtype == "object" and dtype is str:

@@ -517,10 +517,8 @@ def minutes_difference(datetime1, datetime2):
 def process_into_features(df, unique_cols):
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
-    df.astype(float)['runway_arrival_diff'].dtype
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
-    df.astype(float)['gate_arrival_diff'].dtype
     for column, series in df.iteritems():
         if "id" in column:
             print "removing id column: {0}".format(column)
@@ -550,8 +548,9 @@ def process_into_features(df, unique_cols):
             if column != "scheduled_runway_departure":
                 del df[column]
         elif dtype is str:
+            print column
             df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan else np.nan)
-            df.astype(int)[column].dtype
+#            df.astype(float)[column].dtype
         else:
             print column, dtype, df.dtypes[column]
     del df["scheduled_runway_departure"]
@@ -571,15 +570,18 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 if val is not np.nan:
                     dtype = type(val)
                     break
-            if df.dtypes[i] == "object" and dtype is not datetime.datetime and dtype is not datetime.timedelta:
+            if series.dtype == "object" and dtype is str:
                 grouped = df.groupby(column)
                 for val, group in grouped:
                     if column not in unique_cols:
+                        print "adding "+column, dtype, series.dtype
                         # add it to the unique cols map
                         unique_cols[column] = [] # if we have not seen this val before
                     if val not in unique_cols[column]: # append to the unqiue_cols for this column
                         unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
-            return unique_cols
+            else:
+                print "not uniquing {0} {1} {2}".format(column, dtype, series.dtype)
+        return unique_cols
 
 if __name__ == '__main__':
     kind = sys.argv[1]
@@ -611,8 +613,8 @@ if __name__ == '__main__':
         all_dfs.to_csv("all_joined.csv")
     elif kind == "process":
         unique_cols = {}
-        unique_cols = get_unique_values_for_categorical_columns(df, unique_cols):
         all_df = pd.load("all_joined.p")
+        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:

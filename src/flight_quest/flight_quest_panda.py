@@ -570,6 +570,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
             for ix, type_val in series.iteritems():
                 if type_val is not np.nan:
                     dtype = type(type_val)
+                    print dtype, type_val
                     break
             if series.dtype == "object" and dtype is str:
                 grouped = df.groupby(column)

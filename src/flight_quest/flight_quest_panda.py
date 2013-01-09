@@ -566,9 +566,10 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
     except Exception as e:
         for i, (column, series) in enumerate(df.iteritems()):
             dtype = None
-            for ix, val in series.iteritems():
+            type_val = None
+            for ix, type_val in series.iteritems():
                 if val is not np.nan:
-                    dtype = type(val)
+                    dtype = type(type_val)
                     break
             if series.dtype == "object" and dtype is str:
                 grouped = df.groupby(column)
@@ -580,7 +581,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                     if val not in unique_cols[column]: # append to the unqiue_cols for this column
                         unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
             else:
-                print "not uniquing {0} {1} {2}".format(column, dtype, series.dtype)
+                print "not uniquing {0} {1} {2} {3}".format(column, dtype, series.dtype, type_val)
         return unique_cols
 
 if __name__ == '__main__':

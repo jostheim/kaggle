@@ -550,7 +550,7 @@ def process_into_features(df):
         print df.columns[i], df.dtypes[i]
     return df
 
-def get_unique_values_for_categorical_columns(df):
+def get_unique_values_for_categorical_columns(df, unique_cols):
     for row in df.values:
         for column, val in enumerate(row):
             if df.dtypes[column] == "object" and val is not None and val is not np.nan and df.columns[column] and type(val) is not datetime.datetime and type(val) is not datetime.timedelta:
@@ -597,6 +597,7 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             df = get_joined_data(subdirname, True)
-            unique_cols = get_unique_values_for_categorical_columns(df)
+            unique_cols = {}
+            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
 

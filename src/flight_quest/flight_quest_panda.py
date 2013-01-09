@@ -551,16 +551,21 @@ def process_into_features(df):
     return df
 
 def get_unique_values_for_categorical_columns(df, unique_cols):
-    for row in df.values:
-        for column, val in enumerate(row):
-            if df.dtypes[column] == "object" and val is not None and val is not np.nan and df.columns[column] and type(val) is not datetime.datetime and type(val) is not datetime.timedelta:
-                # if the column has not been seen before
-                if df.columns[column] not in unique_cols:
+    for i, (column, series) in enumerate(df.iteritems()):
+        dtype = None
+        for ix, val in series.iteritems():
+            if val is not np.nan:
+                dtype = type(val)
+                break
+        if df.dtypes[i] == "object" and dtype is not datetime.datetime and dtype is not datetime.timedelta:
+            grouped = df.groupby(column)
+            for val, group in grouped:
+                if column not in unique_cols:
                     # add it to the unique cols map
-                    unique_cols[df.columns[column]] = [] # if we have not seen this val before
-                if val not in unique_cols[df.columns[column]]: # append to the unqiue_cols for this column
-                    unique_cols[df.columns[column]].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
-    return unique_cols
+                    unique_cols[column] = [] # if we have not seen this val before
+                if val not in unique_cols[column]: # append to the unqiue_cols for this column
+                    unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
+        return unique_cols
 
 if __name__ == '__main__':
     kind = sys.argv[1]

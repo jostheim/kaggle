@@ -514,11 +514,13 @@ def minutes_difference(datetime1, datetime2):
     diff = datetime1 - datetime2
     return diff.days*24*60+diff.seconds/60
 
-def process_into_features(df):
+def process_into_features(df, unique_cols):
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
+    df.astype(float)['runway_arrival_diff'].dtype
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
+    df.astype(float)['gate_arrival_diff'].dtype
     for column, series in df.iteritems():
         if "id" in column:
             print "removing id column: {0}".format(column)
@@ -531,41 +533,53 @@ def process_into_features(df):
                 break
         if dtype is datetime.datetime:
             df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else np.nan)
+            df.astype(int)['{0}_weekday'.format(column)].dtype
             df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else np.nan)
+            df.astype(int)['{0}_day'.format(column)].dtype
             df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else np.nan)
+            df.astype(int)['{0}_hour'.format(column)].dtype
             df['{0}_minute'.format(column)] = df[column].apply(lambda x: x.minute if type(x) is datetime.datetime else np.nan)
+            df.astype(int)['{0}_minute'.format(column)].dtype
             # get the diff relative to a zero-point
             df['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series
+            df.astype(float)['{0}_diff'.format(column)].dtype
             # set the diff to be in minutes
             df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+            df.astype(int)['{0}_diff'.format(column)].dtype
             # delete the original 
             if column != "scheduled_runway_departure":
                 del df[column]
         elif dtype is str:
-            del df[column]
+            df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan else np.nan)
+            df.astype(int)[column].dtype
         else:
             print column, dtype, df.dtypes[column]
     del df["scheduled_runway_departure"]
+    df.convert_objects()
     for i in xrange(len(df.columns)):
         print df.columns[i], df.dtypes[i]
     return df
 
 def get_unique_values_for_categorical_columns(df, unique_cols):
-    for i, (column, series) in enumerate(df.iteritems()):
-        dtype = None
-        for ix, val in series.iteritems():
-            if val is not np.nan:
-                dtype = type(val)
-                break
-        if df.dtypes[i] == "object" and dtype is not datetime.datetime and dtype is not datetime.timedelta:
-            grouped = df.groupby(column)
-            for val, group in grouped:
-                if column not in unique_cols:
-                    # add it to the unique cols map
-                    unique_cols[column] = [] # if we have not seen this val before
-                if val not in unique_cols[column]: # append to the unqiue_cols for this column
-                    unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
-        return unique_cols
+    try:
+        unique_columns = pickle.load(open("unique_columns.p",'rb'))
+        return unique_columns
+    except Exception as e:
+        for i, (column, series) in enumerate(df.iteritems()):
+            dtype = None
+            for ix, val in series.iteritems():
+                if val is not np.nan:
+                    dtype = type(val)
+                    break
+            if df.dtypes[i] == "object" and dtype is not datetime.datetime and dtype is not datetime.timedelta:
+                grouped = df.groupby(column)
+                for val, group in grouped:
+                    if column not in unique_cols:
+                        # add it to the unique cols map
+                        unique_cols[column] = [] # if we have not seen this val before
+                    if val not in unique_cols[column]: # append to the unqiue_cols for this column
+                        unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
+            return unique_cols
 
 if __name__ == '__main__':
     kind = sys.argv[1]
@@ -596,8 +610,10 @@ if __name__ == '__main__':
         pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
     elif kind == "process":
+        unique_cols = {}
+        unique_cols = get_unique_values_for_categorical_columns(df, unique_cols):
         all_df = pd.load("all_joined.p")
-        process_into_features(all_df)
+        process_into_features(all_df, unique_cols)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)

@@ -11,6 +11,7 @@ import datetime
 from multiprocessing import Pool
 import os, sys
 import random
+import pickle
 from pytz import timezone
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
 
@@ -597,4 +598,5 @@ if __name__ == '__main__':
             print "Working on {0}".format(subdirname)
             df = get_joined_data(subdirname, True)
             unique_cols = get_unique_values_for_categorical_columns(df)
+            pickle.dump(unique_cols, open("unique_columns.p", "wb"))
 

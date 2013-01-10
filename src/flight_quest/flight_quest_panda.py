@@ -521,15 +521,15 @@ def process_into_features(df, unique_cols):
     df['gate_arrival_diff'] = diffs_gate
     for column, series in df.iteritems():
         if "id" in column:
-            print "removing id column: {0}".format(column)
+            print "id column: {0}".format(column)
 #            del df[column]
         # I hate this, but I need to figure out the type and pandas has them as all objects
-        dtype = None
-        for ix, val in series.iteritems():
-            if val is not np.nan:
-                dtype = type(val)
+        dtype_tmp = None
+        for ix, type_val in series.iteritems():
+            if type_val is not np.nan and str(type_val) != "nan":
+                dtype_tmp = type(type_val)
                 break
-        if dtype is datetime.datetime:
+        if dtype_tmp is datetime.datetime:
             df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else np.nan)
             df.astype(int)['{0}_weekday'.format(column)].dtype
             df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else np.nan)
@@ -547,12 +547,11 @@ def process_into_features(df, unique_cols):
             # delete the original 
             if column != "scheduled_runway_departure":
                 del df[column]
-        elif dtype is str:
+        elif dtype_tmp is str:
             print column
             df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan else np.nan)
-#            df.astype(float)[column].dtype
         else:
-            print column, dtype, df.dtypes[column]
+            print column, dtype_tmp, df.dtypes[column], type_val
     del df["scheduled_runway_departure"]
     df.convert_objects()
     for i in xrange(len(df.columns)):
@@ -570,7 +569,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
             for ix, type_val in series.iteritems():
                 if type_val is not np.nan and str(type_val) != "nan":
                     dtype_tmp = type(type_val)
-                    print dtype_tmp, type_val
+#                    print dtype_tmp, type_val
                     break
             if series.dtype == "object" and dtype_tmp is str:
                 grouped = df.groupby(column)

@@ -500,7 +500,8 @@ def get_joined_data(subdirname, force=False):
 #        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_on="airport_code")
 #        df = pd.merge(df, fbwind_departure, how="left", left_on="arrival_airport_code", right_on="airport_code")
         print df.columns
-        pd.save(df, "{0}_joined.p".format(subdirname))
+        pickle.dump(df, open("{0}_joined.p".format(subdirname), "wb"))
+#        pd.save(df, "{0}_joined.p".format(subdirname))
     return df
 
 def get_joined_data_proxy(args):
@@ -610,11 +611,13 @@ if __name__ == '__main__':
                 all_dfs = df
             else:
                 all_dfs = all_dfs.append(df)
-        pd.save(all_dfs, "all_joined.p")
+        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
+#        pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = pd.load("all_joined.p")
+        all_df = pickle.load(open("all_joined.p", "rb"))
+#        all_df = pd.load("all_joined.p")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
     elif kind == "uniques":

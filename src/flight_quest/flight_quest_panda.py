@@ -565,24 +565,24 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
         return unique_columns
     except Exception as e:
         for i, (column, series) in enumerate(df.iteritems()):
-            dtype = None
+            dtype_tmp = None
             type_val = None
             for ix, type_val in series.iteritems():
                 if type_val is not np.nan:
-                    dtype = type(type_val)
-                    print dtype, type_val
+                    dtype_tmp = type(type_val)
+                    print dtype_tmp, type_val
                     break
-            if series.dtype == "object" and dtype is str:
+            if series.dtype == "object" and dtype_tmp is str:
                 grouped = df.groupby(column)
                 for val, group in grouped:
                     if column not in unique_cols:
-                        print "adding "+column, dtype, series.dtype
+                        print "adding "+column, dtype_tmp, series.dtype
                         # add it to the unique cols map
                         unique_cols[column] = [] # if we have not seen this val before
                     if val not in unique_cols[column]: # append to the unqiue_cols for this column
                         unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
             else:
-                print "not uniquing {0} {1} {2} {3}".format(column, dtype, series.dtype, type_val)
+                print "not uniquing {0} {1} {2} {3}".format(column, dtype_tmp, series.dtype, type_val)
         return unique_cols
 
 if __name__ == '__main__':

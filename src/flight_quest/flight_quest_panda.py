@@ -612,7 +612,7 @@ if __name__ == '__main__':
                 all_dfs = all_dfs.append(df)
         pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
-    elif kind == "process":
+    elif kind == "generate_features":
         unique_cols = {}
         all_df = pd.load("all_joined.p")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)

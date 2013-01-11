@@ -14,7 +14,6 @@ import random
 import pickle
 from pytz import timezone
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
-from pytables import HDFStore
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'

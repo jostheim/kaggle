@@ -612,14 +612,14 @@ if __name__ == '__main__':
                 all_dfs = df
             else:
                 all_dfs = all_dfs.append(df)
-        store = HDFStore('store.h5')
+        store = pd.HDFStore('store.h5')
         store['all_df'] = all_dfs
 #        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
 #        pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
     elif kind == "generate_features":
         unique_cols = {}
-        store = HDFStore('store.h5')
+        store = pd.HDFStore('store.h5')
         all_df = store['all_df']
 #        all_df = pickle.load(open("all_joined.p", "rb"))
 #        all_df = pd.load("all_joined.p")

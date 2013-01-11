@@ -652,7 +652,7 @@ if __name__ == '__main__':
     elif kind == "concat":
         sample_size = None
         if len(sys.argv) > 2:
-            sample_size = int(sample_size)
+            sample_size = int(sys.argv[2])
         all_dfs = concat(subdirname, sample_size=sample_size)
 #        store = pd.HDFStore('store.h5')
 #        store['all_df'] = all_dfs
@@ -677,7 +677,7 @@ if __name__ == '__main__':
     elif kind == "learn":
         sample_size = None
         if len(sys.argv) > 2:
-            sample_size = int(sample_size)
+            sample_size = int(sys.argv[2])
         all_df = concat(subdirname, sample_size=sample_size)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)

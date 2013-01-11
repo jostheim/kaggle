@@ -621,7 +621,7 @@ def random_forest_classify(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(subdirname, sample_size=None):
+def concat(sample_size=None):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
@@ -653,7 +653,7 @@ if __name__ == '__main__':
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_dfs = concat(subdirname, sample_size=sample_size)
+        all_dfs = concat(sample_size=sample_size)
 #        store = pd.HDFStore('store.h5')
 #        store['all_df'] = all_dfs
 #        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
@@ -678,7 +678,7 @@ if __name__ == '__main__':
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_df = concat(subdirname, sample_size=sample_size)
+        all_df = concat(sample_size=sample_size)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
         # may want to rebin here

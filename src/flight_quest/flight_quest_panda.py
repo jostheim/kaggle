@@ -565,7 +565,7 @@ def process_into_features(df, unique_cols):
                 del df[column]
         elif dtype_tmp is str:
             print column
-            df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan else np.nan)
+            df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
         else:
             print column, dtype_tmp, df.dtypes[column], type_val
     del df["scheduled_runway_departure"]

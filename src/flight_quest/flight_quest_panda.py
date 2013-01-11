@@ -14,6 +14,8 @@ import random
 import pickle
 from pytz import timezone
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import cross_validation
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -314,6 +316,7 @@ def get_atscc_ground_delay():
         d = {}
     #   print "switching"
         d = {'ground_delay_program_id':int(name)}
+        group = group.sort_index(by="start_time")
         for k, row in enumerate(group.values):
             for j, val in enumerate(row):
                 if group.columns[j] != "ground_delay_program_id":
@@ -485,11 +488,12 @@ def get_joined_data(subdirname, force=False):
         print "Working on {0}".format(subdirname)
         df = get_flight_history()
         events = get_flight_history_events()
-        asdi_disposition = get_asdi_disposition()
-        asdi_merged = get_asdi_merged()
-        joiners = [events, asdi_disposition, asdi_merged]
+        # forget ASDI positioning for now, don't think we have enough information to make positions useful
+#        asdi_disposition = get_asdi_disposition()
+#        asdi_merged = get_asdi_merged()
+#        joiners = [events, asdi_disposition, asdi_merged]
         per_flights = get_for_flights(df)
-        joiners += per_flights
+        joiners = [per_flights]
         df = df.join(joiners)
         metar_arrival = get_metar("arrival")
         metar_departure = get_metar("departure")
@@ -518,9 +522,20 @@ def minutes_difference(datetime1, datetime2):
 def process_into_features(df, unique_cols):
     diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] = diffs
+    df['runway_arrival_diff'] =  df['runway_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] = diffs_gate
+    # more features associated with differences
+    df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+    df['gate_departure_diff'] = df['actual_gate_departure'] - df['scheduled_gate_departure']
+    df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if x is not np.nan else np.nan)
+    df['runway_departure_diff'] = df['actual_runway_departure'] - df['scheduled_runway_departure']
+    df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if x is not np.nan else np.nan)
     for column, series in df.iteritems():
+        # no data, no need to keep it
+        if len(series.dropna()) == 0:
+            del df[column]
+            continue
         if "id" in column:
             print "id column: {0}".format(column)
 #            del df[column]
@@ -585,6 +600,43 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 print "not uniquing {0} {1} {2} {3}".format(column, dtype_tmp, series.dtype, type_val)
         return unique_cols
 
+def random_forest_classify(targets, features):
+    cfr = RandomForestClassifier(
+        n_estimators=100,
+        max_features=None,
+        verbose=2,
+        compute_importances=True,
+        n_jobs=8,
+        random_state=0,
+    )
+    cv = cross_validation.KFold(len(features), k=5, indices=False)
+
+    #iterate through the training and test cross validation segments and
+    #run the classifier on each one, aggregating the results into a list
+    results = []
+    for traincv, testcv in cv:
+        score = cfr.fit(features[traincv], targets[traincv]).score(features[traincv], targets[traincv])
+        results.append(score)
+
+    #print out the mean of the cross-validated results
+    print "Results: " + str( np.array(results).mean() )
+
+def concat(subdirname, sample_size=None):
+    all_dfs = None
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        df = get_joined_data(subdirname, True)
+        samples = len(df.index) / 2
+        if samples is not None:
+            samples = sample_size
+        rows = random.sample(df.index, samples)
+        df = df.ix[rows]
+        if all_dfs is None:
+            all_dfs = df
+        else:
+            all_dfs = all_dfs.append(df)
+    return all_dfs
+
 if __name__ == '__main__':
     kind = sys.argv[1]
     if kind == "build_multi":
@@ -598,29 +650,20 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             get_joined_data(subdirname)
     elif kind == "concat":
-        all_dfs = None
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            df = get_joined_data(subdirname, True)
-            sample_size = len(df.index)/2
-            if len(sys.argv) > 2:
-                sample_size = int(sys.argv[2])
-            rows = random.sample(df.index, sample_size)
-            df = df.ix[rows]
-            if all_dfs is None:
-                all_dfs = df
-            else:
-                all_dfs = all_dfs.append(df)
-        store = pd.HDFStore('store.h5')
-        store['all_df'] = all_dfs
+        sample_size = None
+        if len(sys.argv) > 2:
+            sample_size = int(sample_size)
+        all_dfs = concat(subdirname, sample_size=sample_size)
+#        store = pd.HDFStore('store.h5')
+#        store['all_df'] = all_dfs
 #        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
 #        pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
     elif kind == "generate_features":
         unique_cols = {}
-        store = pd.HDFStore('store.h5')
-        all_df = store['all_df']
-#        all_df = pickle.load(open("all_joined.p", "rb"))
+#        store = pd.HDFStore('store.h5')
+#        all_df = store['all_df']
+        all_df = pickle.load(open("all_joined.p", "rb"))
 #        all_df = pd.load("all_joined.p")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
@@ -631,4 +674,18 @@ if __name__ == '__main__':
             unique_cols = {}
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
+    elif kind == "learn":
+        sample_size = None
+        if len(sys.argv) > 2:
+            sample_size = int(sample_size)
+        all_df = concat(subdirname, sample_size=sample_size)
+        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+        all_df = process_into_features(all_df, unique_cols)
+        # may want to rebin here
+        targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
+        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
+        random_forest_classify(targets, features)
+        
 
+
+        

@@ -637,6 +637,20 @@ def concat(sample_size=None):
             all_dfs = all_dfs.append(df)
     return all_dfs
 
+def rebin_targets(targets, nbins):
+    bin_max = np.max(targets)
+    bin_min = np.min(targets)
+    print "bin_max: {0}, bin_min: {1}".format(bin_max, bin_min)
+    bins = np.linspace(bin_min, bin_max, nbins) 
+    digitized = np.digitize(orig_bins, bins)
+    new_bins = []
+    for digit in digitized:
+        if digit == len(bins):
+            new_bins.append(bins[digit-1])
+        else:
+            new_bins.append((bins[digit-1] + bins[digit])/2.0)
+    return new_bins
+
 if __name__ == '__main__':
     kind = sys.argv[1]
     if kind == "build_multi":
@@ -675,6 +689,7 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
+        unique_cols = {}
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])

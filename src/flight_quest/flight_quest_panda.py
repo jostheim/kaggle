@@ -547,19 +547,13 @@ def process_into_features(df, unique_cols):
                 break
         if dtype_tmp is datetime.datetime:
             df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else np.nan)
-            df.astype(int)['{0}_weekday'.format(column)].dtype
             df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else np.nan)
-            df.astype(int)['{0}_day'.format(column)].dtype
             df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else np.nan)
-            df.astype(int)['{0}_hour'.format(column)].dtype
             df['{0}_minute'.format(column)] = df[column].apply(lambda x: x.minute if type(x) is datetime.datetime else np.nan)
-            df.astype(int)['{0}_minute'.format(column)].dtype
             # get the diff relative to a zero-point
             df['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series
-            df.astype(float)['{0}_diff'.format(column)].dtype
             # set the diff to be in minutes
             df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-            df.astype(int)['{0}_diff'.format(column)].dtype
             # delete the original 
             if column != "scheduled_runway_departure":
                 del df[column]

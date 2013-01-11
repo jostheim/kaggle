@@ -620,11 +620,12 @@ def concat(sample_size=None):
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
         df = get_joined_data(subdirname, True)
-        samples = len(df.index) / 2
+        df_tmp = df.ix[df['gate_arrival_diff'].dropna()]
+        samples = len(df_tmp.index) / 2
         if samples is not None:
             samples = sample_size
-        rows = random.sample(df.index, samples)
-        df = df.ix[rows]
+        rows = random.sample(df_tmp.index, samples)
+        df_tmp = df_tmp.ix[rows]
         if all_dfs is None:
             all_dfs = df
         else:
@@ -690,6 +691,7 @@ if __name__ == '__main__':
         all_df = concat(sample_size=sample_size)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
+        print all_df
         # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
         features = all_df.ix[all_df['gate_arrival_diff'].dropna()]

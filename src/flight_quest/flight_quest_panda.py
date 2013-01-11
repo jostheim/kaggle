@@ -14,6 +14,7 @@ import random
 import pickle
 from pytz import timezone
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
+from pytables import HDFStore
 
 data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
 data_rev_prefix = 'InitialTrainingSet_rev1'
@@ -611,12 +612,16 @@ if __name__ == '__main__':
                 all_dfs = df
             else:
                 all_dfs = all_dfs.append(df)
-        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
+        store = HDFStore('store.h5')
+        store['all_df'] = all_dfs
+#        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
 #        pd.save(all_dfs, "all_joined.p")
         all_dfs.to_csv("all_joined.csv")
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = pickle.load(open("all_joined.p", "rb"))
+        store = HDFStore('store.h5')
+        all_df = store['all_df']
+#        all_df = pickle.load(open("all_joined.p", "rb"))
 #        all_df = pd.load("all_joined.p")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)

@@ -200,6 +200,10 @@ def get_flight_history_events():
 def get_asdi_root(): 
     asdi_root_filename = "{0}/{1}/{2}/ASDI/asdiflightplan.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_root_df = pd.read_csv(asdi_root_filename, na_values=na_values, index_col=['asdiflightplanid'], parse_dates=[1,7,8,9,10], date_parser=parse_date_time)
+    asdi_root_df['estimateddepartureutc_diff'] = asdi_root_df['estimateddepartureutc'] - asdi_root_df['originaldepartureutc'] 
+    asdi_root_df['estimateddepartureutc_diff'] =  asdi_root_df['estimateddepartureutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+    asdi_root_df['estimatedarrivalutc_diff'] = asdi_root_df['estimatedarrivalutc'] - asdi_root_df['originalarrivalutc'] 
+    asdi_root_df['estimatedarrivalutc_diff'] =  asdi_root_df['estimatedarrivalutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     return asdi_root_df
 
 def get_asdi_airway():
@@ -534,6 +538,7 @@ def process_into_features(df, unique_cols):
     for column, series in df.iteritems():
         # no data, no need to keep it
         if len(series.dropna()) == 0:
+            print "deleting column {0} because it was all nan's".format(column)
             del df[column]
             continue
         if "id" in column:
@@ -562,7 +567,8 @@ def process_into_features(df, unique_cols):
             df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
         else:
             print column, dtype_tmp, df.dtypes[column], type_val
-    del df["scheduled_runway_departure"]
+    if "scheduled_runway_departure" in df.columns:
+        del df["scheduled_runway_departure"]
     df.convert_objects()
     for i in xrange(len(df.columns)):
         print df.columns[i], df.dtypes[i]

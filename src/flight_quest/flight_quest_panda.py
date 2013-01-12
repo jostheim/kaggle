@@ -701,9 +701,9 @@ if __name__ == '__main__':
         all_df = process_into_features(all_df, unique_cols)
         print all_df
 #        # may want to rebin here
-#        targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
-#        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
-#        random_forest_classify(targets, features)
+        targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
+        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
+        random_forest_classify(targets, features)
         
 
 

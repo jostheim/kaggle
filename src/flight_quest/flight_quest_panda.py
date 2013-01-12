@@ -537,10 +537,10 @@ def process_into_features(df, unique_cols):
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     for column, series in df.iteritems():
         # no data, no need to keep it
-        if len(series.dropna()) == 0:
-            print "deleting column {0} because it was all nan's".format(column)
-            del df[column]
-            continue
+#        if len(series.dropna()) == 0:
+#            print "deleting column {0} because it was all nan's".format(column)
+#            del df[column]
+#            continue
         if "id" in column:
             print "id column: {0}".format(column)
 #            del df[column]
@@ -569,7 +569,7 @@ def process_into_features(df, unique_cols):
             print column, dtype_tmp, df.dtypes[column], type_val
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
-    df.convert_objects()
+#    df.convert_objects()
     for i in xrange(len(df.columns)):
         print df.columns[i], df.dtypes[i]
     return df

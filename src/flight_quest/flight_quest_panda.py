@@ -629,9 +629,9 @@ def concat(sample_size=None):
         rows = random.sample(df_tmp.index, samples)
         df_tmp = df_tmp.ix[rows]
         if all_dfs is None:
-            all_dfs = df
+            all_dfs = df_tmp
         else:
-            all_dfs = all_dfs.append(df)
+            all_dfs = all_dfs.append(df_tmp)
     return all_dfs
 
 def rebin_targets(targets, nbins):

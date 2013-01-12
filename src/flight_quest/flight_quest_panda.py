@@ -528,9 +528,9 @@ def process_into_features(df, unique_cols):
     # more features associated with differences
     df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['gate_departure_diff'] = df['actual_gate_departure'] - df['scheduled_gate_departure']
-    df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if x is not np.nan else np.nan)
+    df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['runway_departure_diff'] = df['actual_runway_departure'] - df['scheduled_runway_departure']
-    df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if x is not np.nan else np.nan)
+    df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     for column, series in df.iteritems():
         # no data, no need to keep it
         if len(series.dropna()) == 0:

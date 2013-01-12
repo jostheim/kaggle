@@ -637,6 +637,7 @@ def concat(sample_size=None):
             all_dfs = df_tmp
         else:
             all_dfs = all_dfs.append(df_tmp)
+    print all_dfs
     return all_dfs
 
 def rebin_targets(targets, nbins):
@@ -696,13 +697,13 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
         all_df = concat(sample_size=sample_size)
-        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        all_df = process_into_features(all_df, unique_cols)
-        print all_df
-        # may want to rebin here
-        targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
-        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
-        random_forest_classify(targets, features)
+#        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+#        all_df = process_into_features(all_df, unique_cols)
+#        print all_df
+#        # may want to rebin here
+#        targets = all_df['gate_arrival_diff'].dropna().apply(lambda x: int(x) if x is not np.nan else np.nan)
+#        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
+#        random_forest_classify(targets, features)
         
 
 

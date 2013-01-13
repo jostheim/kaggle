@@ -697,9 +697,9 @@ if __name__ == '__main__':
         all_df = process_into_features(all_df, unique_cols)
         print all_df
 #        # may want to rebin here
-        df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+        all_df['gate_arrival_diff'] = all_df['actual_gate_arrival'] - all_df['scheduled_gate_arrival']
         # more features associated with differences
-        df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+        all_df['gate_arrival_diff'] =  all_df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         targets = all_df['gate_arrival_diff'].dropna()
         print targets
         print all_df['gate_arrival_diff'].dropna()

@@ -524,11 +524,6 @@ def minutes_difference(datetime1, datetime2):
     return diff.days*24*60+diff.seconds/60
 
 def process_into_features(df, unique_cols):
-    df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-    # more features associated with differences
-    df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-    print df['gate_arrival_diff'].dtype
-    return df
     df['runway_arrival_diff'] = df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] =  df['runway_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['gate_departure_diff'] = df['actual_gate_departure'] - df['scheduled_gate_departure']
@@ -627,8 +622,11 @@ def concat(sample_size=None):
         print "Working on {0}".format(subdirname)
         df = get_joined_data(subdirname, True)
         print "df.index",df.index
-        diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-        df_tmp = df.ix[diffs_gate.dropna().index]
+        df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+        df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+        # we have to have gate_arrival_diff b/c it is the target so reduce set to
+        # non-nan values
+        df_tmp = df.ix[df['gate_arrival_diff'].dropna().index]
         print "df_tmp.index",df_tmp.index
         samples = len(df_tmp.index) / 2
         if samples is not None:
@@ -709,7 +707,7 @@ if __name__ == '__main__':
         targets = all_df['gate_arrival_diff'].dropna()
         print targets
         print all_df['gate_arrival_diff'].dropna()
-        features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
+        features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]
         print features
         random_forest_classify(targets, features)
         

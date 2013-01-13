@@ -524,8 +524,11 @@ def minutes_difference(datetime1, datetime2):
     return diff.days*24*60+diff.seconds/60
 
 def process_into_features(df, unique_cols):
-    diffs =  df['actual_runway_arrival'] - df['scheduled_runway_arrival']
-    df['runway_arrival_diff'] = diffs
+    df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+    # more features associated with differences
+    df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+    print df['gate_arrival_diff'].dtype
+    df['runway_arrival_diff'] = df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] =  df['runway_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['gate_departure_diff'] = df['actual_gate_departure'] - df['scheduled_gate_departure']
     df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
@@ -633,6 +636,7 @@ def concat(sample_size=None):
             all_dfs = df_tmp
         else:
             all_dfs = all_dfs.append(df_tmp)
+        break
     print all_dfs
     return all_dfs
 
@@ -697,9 +701,6 @@ if __name__ == '__main__':
         all_df = process_into_features(all_df, unique_cols)
         print all_df
 #        # may want to rebin here
-        all_df['gate_arrival_diff'] = all_df['actual_gate_arrival'] - all_df['scheduled_gate_arrival']
-        # more features associated with differences
-        all_df['gate_arrival_diff'] =  all_df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         targets = all_df['gate_arrival_diff'].dropna()
         print targets
         print all_df['gate_arrival_diff'].dropna()

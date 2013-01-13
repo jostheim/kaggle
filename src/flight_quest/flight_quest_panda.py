@@ -628,7 +628,7 @@ def concat(sample_size=None):
         df = get_joined_data(subdirname, True)
         print "df.index",df.index
         diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-        df_tmp = df.ix[diffs_gate.dropna()]
+        df_tmp = df.ix[diffs_gate.dropna().index]
         print "df_tmp.index",df_tmp.index
         samples = len(df_tmp.index) / 2
         if samples is not None:

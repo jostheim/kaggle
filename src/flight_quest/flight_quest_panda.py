@@ -626,15 +626,19 @@ def concat(sample_size=None):
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
         df = get_joined_data(subdirname, True)
+        print "df.index",df.index
         diffs_gate = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df_tmp = df.ix[diffs_gate.dropna()]
+        print "df_tmp.index",df_tmp.index
         samples = len(df_tmp.index) / 2
         if samples is not None:
             samples = sample_size
         rows = random.sample(df_tmp.index, samples)
         df_tmp = df_tmp.ix[rows]
         if all_dfs is None:
+            print "all_dfs before",all_dfs.index
             all_dfs = df_tmp
+            print "all_dfs after",all_dfs.index
         else:
             all_dfs = all_dfs.append(df_tmp)
         break

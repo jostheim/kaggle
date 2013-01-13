@@ -560,6 +560,9 @@ def process_into_features(df, unique_cols):
         elif dtype_tmp is str:
             print column
             df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
+        elif series.dtype is object or str(series.dtype) == "object":
+            print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column)
+            del df[column]
         else:
             print column, dtype_tmp, df.dtypes[column], type_val
     if "scheduled_runway_departure" in df.columns:

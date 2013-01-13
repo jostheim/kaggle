@@ -703,6 +703,7 @@ if __name__ == '__main__':
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()
         print targets
+        print all_df['gate_arrival_diff'].dropna()
         features = all_df.ix[all_df['gate_arrival_diff'].dropna()]
         print features
         random_forest_classify(targets, features)

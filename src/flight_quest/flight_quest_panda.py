@@ -700,7 +700,7 @@ if __name__ == '__main__':
         all_df = concat(sample_size=sample_size)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
-        print all_df
+        print all_df.index
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()
         print targets

@@ -634,7 +634,6 @@ def concat(sample_size=None):
         rows = random.sample(df_tmp.index, samples)
         df_tmp = df_tmp.ix[rows]
         if all_dfs is None:
-            print "all_dfs before",all_dfs.index
             all_dfs = df_tmp
             print "all_dfs after",all_dfs.index
         else:

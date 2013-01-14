@@ -573,7 +573,9 @@ def process_into_features(df, unique_cols):
         del df["scheduled_runway_departure"]
     df = df.convert_objects()
     for i in xrange(len(df.columns)):
-        print df.columns[i], df.dtypes[i]
+        if series.dtype is object or str(series.dtype) == "object":
+            print "AFter convert types {0} is still an object".format(df.columns[i])
+            df[i] = df.astype(float)[i]
     return df
 
 def get_unique_values_for_categorical_columns(df, unique_cols):

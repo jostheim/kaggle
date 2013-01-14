@@ -571,6 +571,7 @@ def process_into_features(df, unique_cols):
             print column, dtype_tmp, df.dtypes[column], type_val
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
+    df.fillna(0.0)
     df = df.convert_objects()
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":

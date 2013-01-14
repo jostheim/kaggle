@@ -571,7 +571,7 @@ def process_into_features(df, unique_cols):
             print column, dtype_tmp, df.dtypes[column], type_val
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
-#    df.convert_objects()
+    df = df.convert_objects()
     for i in xrange(len(df.columns)):
         print df.columns[i], df.dtypes[i]
     return df

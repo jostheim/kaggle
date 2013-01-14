@@ -572,9 +572,9 @@ def process_into_features(df, unique_cols):
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
     df = df.convert_objects()
-    for i in xrange(len(df.columns)):
+    for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
-            print "AFter convert types {0} is still an object".format(df.columns[i])
+            print "AFter convert types {0} is still an object".format(column)
             df[i] = df.astype(float)[i]
     return df
 

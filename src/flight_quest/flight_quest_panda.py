@@ -546,6 +546,10 @@ def process_into_features(df, unique_cols):
                 dtype_tmp = type(type_val)
                 break
         if dtype_tmp is datetime.datetime:
+            # can't use this as this is our target
+            if column == "actual_gate_arrival":
+                del df[column]
+                continue
             df['{0}_weekday'.format(column)] = df[column].apply(lambda x: x.weekday() if type(x) is datetime.datetime else np.nan)
             df['{0}_day'.format(column)] = df[column].apply(lambda x: x.day if type(x) is datetime.datetime else np.nan)
             df['{0}_hour'.format(column)] = df[column].apply(lambda x: x.hour if type(x) is datetime.datetime else np.nan)
@@ -709,6 +713,8 @@ if __name__ == '__main__':
         print targets
         print all_df['gate_arrival_diff'].dropna()
         features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]
+        # remove the target from the features
+        del features['gate_arrival_diff']
         print features
         random_forest_classify(targets, features)
         

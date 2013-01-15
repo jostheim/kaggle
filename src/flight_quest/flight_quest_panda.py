@@ -625,6 +625,7 @@ def random_forest_classify(targets, features):
         cfr.fit(features[traincv], targets[traincv])
         print "Scoring cross validation #{0}".format(i)
         score = cfr.score(features[traincv], targets[traincv])
+        print "Score for cross validation #{0}".format(i)
         results.append(score)
 
     #print out the mean of the cross-validated results

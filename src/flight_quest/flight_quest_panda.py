@@ -576,7 +576,8 @@ def process_into_features(df, unique_cols):
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)
-            df[column] = df[column].astype(float)
+            del df[column]
+            #df[column] = df[column].astype(float)
     return df
 
 def get_unique_values_for_categorical_columns(df, unique_cols):

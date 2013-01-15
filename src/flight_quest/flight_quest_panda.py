@@ -620,8 +620,11 @@ def random_forest_classify(targets, features):
     #iterate through the training and test cross validation segments and
     #run the classifier on each one, aggregating the results into a list
     results = []
-    for traincv, testcv in cv:
-        score = cfr.fit(features[traincv], targets[traincv]).score(features[traincv], targets[traincv])
+    for i, (traincv, testcv) in enumerate(cv):
+        print "Fitting cross validation #{0}".format(i)
+        cfr.fit(features[traincv], targets[traincv])
+        print "Scoring cross validation #{0}".format(i)
+        score = cfr.score(features[traincv], targets[traincv])
         results.append(score)
 
     #print out the mean of the cross-validated results

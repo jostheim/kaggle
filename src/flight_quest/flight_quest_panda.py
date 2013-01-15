@@ -30,7 +30,6 @@ def parse_date_time(val):
             return dateutil.parser.parse(val)
         except ValueError as e:
 #            print e
-            pass
             return np.nan
     else:
         return np.nan
@@ -625,7 +624,7 @@ def random_forest_classify(targets, features):
         cfr.fit(features[traincv], targets[traincv])
         print "Scoring cross validation #{0}".format(i)
         score = cfr.score(features[traincv], targets[traincv])
-        print "Score for cross validation #{0}".format(i)
+        print "Score for cross validation #{0}, score: {1}".format(i, score)
         results.append(score)
 
     #print out the mean of the cross-validated results

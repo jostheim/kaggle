@@ -74,6 +74,137 @@ def get_metar(prefix):
     tmp_df.set_index('weather_station_code', inplace=True, verify_integrity=True)
     return tmp_df
 
+def get_taf(prefix):
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_taf.csv"
+    taf_df = pd.read_csv(filename, index_col=['tafid'], parse_dates=[8,9,10,11], date_parser=parse_date_time, na_values=["MISSING"])
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_tafforecast.csv"
+    taf_forceast_df = pd.read_csv(filename, index_col=['tafforecastid'], parse_dates=[4,5,7], date_parser=parse_date_time, na_values=["MISSING"])
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_taficing.csv"
+    taf_icing_df = pd.read_csv(filename, na_values=["MISSING"])
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_tafsky.csv"
+    taf_sky_df = pd.read_csv(filename, na_values=["MISSING"])
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_taftemperature.csv"
+    taf_temperature_df = pd.read_csv(filename, na_values=["MISSING"])
+    filename = "/Users/jostheim/workspace/kaggle/data/flight_quest/InitialTrainingSet_rev1/2012_11_12/otherweather/flightstats_tafturbulence.csv"
+    taf_turbulence_df = pd.read_csv(filename, na_values=["MISSING"])
+    
+    grouped = taf_icing_df.groupby('tafforecastid')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'tafforecastid':int(name)}
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "tafforecastid":
+                    dict["taf_icing_{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    taf_icing_flattened_df = pd.DataFrame(groups)
+    taf_icing_flattened_df.set_index("tafforecastid", inplace=True, verify_integrity=True)
+    
+    
+    grouped = taf_sky_df.groupby('tafforecastid')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'tafforecastid':int(name)}
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "tafforecastid":
+                    dict["taf_forecast_{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    taf_sky_flattened_df = pd.DataFrame(groups)
+    taf_sky_flattened_df.set_index("tafforecastid", inplace=True, verify_integrity=True)
+    
+    
+    grouped = taf_temperature_df.groupby('tafforecastid')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'tafforecastid':int(name)}
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "tafforecastid":
+                    dict["taf_temperature_{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    taf_temperature_flattened_df = pd.DataFrame(groups)
+    taf_temperature_flattened_df.set_index("tafforecastid", inplace=True, verify_integrity=True)
+    
+    
+    grouped = taf_turbulence_df.groupby('tafforecastid')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'tafforecastid':int(name)}
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "tafforecastid":
+                    dict["taf_turbulence_{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    taf_turbulence_df_flattened_df = pd.DataFrame(groups)
+    taf_turbulence_df_flattened_df.set_index("tafforecastid", inplace=True, verify_integrity=True)
+    
+    taf_forceast_df = taf_forceast_df.join([taf_icing_flattened_df, taf_sky_flattened_df, taf_temperature_flattened_df, taf_turbulence_df_flattened_df])
+    grouped = taf_forceast_df.groupby('tafid')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'tafid':int(name)}
+        group = group.sort_index(by="forecasttimefromutc")
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "tafid":
+                    dict["{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    taf_forceast_df_flattened = pd.DataFrame(groups)
+    taf_forceast_df_flattened.set_index('tafid', inplace=True, verify_integrity=True)
+    
+    
+    taf_df = taf_df.join(taf_forceast_df_flattened)
+    
+    grouped = taf_df.groupby('airport')
+    groups = []
+    i = 0
+    for n, (name, group) in enumerate(grouped):
+        dict = {}
+    #   print "switching"
+        dict = {'airport':name}
+        group = group.sort_index(by="validtimefromutc")
+        for k, row in enumerate(group.values):
+    #        print row
+            for j, val in enumerate(row):
+                if group.columns[j] != "airport":
+                    dict["{0}_{1}".format(k, group.columns[j])] = val
+        groups.append(dict)
+        i += 1
+    
+    taf_df = pd.DataFrame(groups)
+    taf_df.set_index("airport", inplace=True, verify_integrity=True)
+    new_col_names = []
+    for col in taf_df.columns:
+        new_col_names.append("{0}_{1}".format(prefix, col))
+    taf_df.columns = new_col_names
+    return taf_df
+
 def get_fbwind(prefix):
     filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindreport.csv".format(data_prefix, data_rev_prefix, date_prefix)
     fbwindreport_df = pd.read_csv(filename, parse_dates=[1], date_parser=parse_date_time, na_values=na_values)
@@ -502,10 +633,14 @@ def get_joined_data(subdirname, force=False):
         metar_departure = get_metar("departure")
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-#        fbwind_arrival = get_fbwind("arrival")
-#        fbwind_departure = get_fbwind("departure")
-#        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_on="airport_code")
-#        df = pd.merge(df, fbwind_departure, how="left", left_on="arrival_airport_code", right_on="airport_code")
+        fbwind_arrival = get_fbwind("arrival")
+        fbwind_departure = get_fbwind("departure")
+        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_on="airport_code")
+        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_on="airport_code")
+        taf_arrival = get_taf("arrival")
+        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_on="airport")
+        taf_departure = get_taf("departure")
+        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_on="airport")
         print df.columns
         pickle.dump(df, open("{0}_joined.p".format(subdirname), "wb"))
 #        pd.save(df, "{0}_joined.p".format(subdirname))
@@ -608,7 +743,6 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
 
 def random_forest_classify(targets, features):
     cv = cross_validation.KFold(len(features), k=5, indices=False)
-
     #iterate through the training and test cross validation segments and
     #run the classifier on each one, aggregating the results into a list
     results = []
@@ -626,7 +760,15 @@ def random_forest_classify(targets, features):
         print "Scoring cross validation #{0}".format(i)
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
-        print "Selected features: {0}".format(cfr.transform(features))
+        print cfr.feature_importances_
+        features_list = []
+        for j, importance in enumerate(cfr.feature_importances_):
+            column = features.columns[j]
+            features_list.append((column, importance))
+        features_list = sorted(features_list, key=lambda x: x[1])
+        print "Features importance"
+        for j, tup in enumerate(features_list):
+            print j, tup
         results.append(score)
 
     #print out the mean of the cross-validated results

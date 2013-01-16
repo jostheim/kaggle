@@ -606,24 +606,24 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
         return unique_cols
 
 def random_forest_classify(targets, features):
-    cfr = RandomForestClassifier(
-        n_estimators=100,
-        max_features=None,
-        verbose=2,
-        compute_importances=True,
-        n_jobs=8,
-        random_state=0,
-    )
     cv = cross_validation.KFold(len(features), k=5, indices=False)
 
     #iterate through the training and test cross validation segments and
     #run the classifier on each one, aggregating the results into a list
     results = []
     for i, (traincv, testcv) in enumerate(cv):
+        cfr = RandomForestClassifier(
+        n_estimators=100,
+        max_features=None,
+        verbose=2,
+        compute_importances=True,
+        n_jobs=8,
+        random_state=0,
+        )
         print "Fitting cross validation #{0}".format(i)
         cfr.fit(features[traincv], targets[traincv])
         print "Scoring cross validation #{0}".format(i)
-        score = cfr.score(features[traincv], targets[traincv])
+        score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
         results.append(score)
 
@@ -707,13 +707,17 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
-        unique_cols = {}
-        sample_size = None
-        if len(sys.argv) > 2:
-            sample_size = int(sys.argv[2])
-        all_df = concat(sample_size=sample_size)
-        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        all_df = process_into_features(all_df, unique_cols)
+        if os.path.isfile("features.csv"):
+            all_df = pd.read_csv("features.csv", index_col=[0], na_values=na_values)
+        else:
+            unique_cols = {}
+            sample_size = None
+            if len(sys.argv) > 2:
+                sample_size = int(sys.argv[2])
+            all_df = concat(sample_size=sample_size)
+            unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+            all_df = process_into_features(all_df, unique_cols)
+            all_df.to_csv("features.csv")
         print all_df.index
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()

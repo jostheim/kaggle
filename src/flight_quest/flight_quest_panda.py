@@ -710,6 +710,7 @@ if __name__ == '__main__':
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
         if os.path.isfile("features.csv"):
+            print "reading features from features.csv"
             all_df = pd.read_csv("features.csv", index_col=[0], na_values=na_values)
         else:
             unique_cols = {}
@@ -719,6 +720,7 @@ if __name__ == '__main__':
             all_df = concat(sample_size=sample_size)
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
+            print "writing features to features.csv"
             all_df.to_csv("features.csv")
         print all_df.index
 #        # may want to rebin here

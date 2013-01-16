@@ -658,6 +658,8 @@ def minutes_difference(datetime1, datetime2):
     return diff.days*24*60+diff.seconds/60
 
 def process_into_features(df, unique_cols):
+    df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
+    df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['runway_arrival_diff'] = df['actual_runway_arrival'] - df['scheduled_runway_arrival']
     df['runway_arrival_diff'] =  df['runway_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['gate_departure_diff'] = df['actual_gate_departure'] - df['scheduled_gate_departure']
@@ -666,10 +668,13 @@ def process_into_features(df, unique_cols):
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     for column, series in df.iteritems():
         # no data, no need to keep it
-#        if len(series.dropna()) == 0:
-#            print "deleting column {0} because it was all nan's".format(column)
-#            del df[column]
-#            continue
+        #create diff columns for estimates
+        if "estimated_gate_arrival" in column:
+            df["{0}_diff".format(column)] = df[column] - df['scheduled_gate_arrival']
+            df["{0}_diff".format(column)] = df["{0}_diff".format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+        if 'estimated_runway_arrival' in column:
+            df["{0}_diff".format(column)] = df[column] - df['scheduled_runway_arrival']
+            df["{0}_diff".format(column)] = df["{0}_diff".format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         if "id" in column:
             print "id column: {0}".format(column)
 #            del df[column]
@@ -765,7 +770,7 @@ def random_forest_classify(targets, features):
         for j, importance in enumerate(cfr.feature_importances_):
             column = features.columns[j]
             features_list.append((column, importance))
-        features_list = sorted(features_list, key=lambda x: x[1])
+        features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
         print "Features importance"
         for j, tup in enumerate(features_list):
             print j, tup

@@ -492,9 +492,9 @@ def get_joined_data(subdirname, force=False):
         df = get_flight_history()
         events = get_flight_history_events()
         # forget ASDI positioning for now, don't think we have enough information to make positions useful
-#        asdi_disposition = get_asdi_disposition()
-#        asdi_merged = get_asdi_merged()
-#        joiners = [events, asdi_disposition, asdi_merged]
+        asdi_disposition = get_asdi_disposition()
+        asdi_merged = get_asdi_merged()
+        joiners = [events, asdi_disposition, asdi_merged]
         per_flights = get_for_flights(df)
         joiners = [per_flights]
         df = df.join(joiners)
@@ -575,6 +575,7 @@ def process_into_features(df, unique_cols):
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)
+            print series
             del df[column]
             #df[column] = df[column].astype(float)
     return df
@@ -625,6 +626,7 @@ def random_forest_classify(targets, features):
         print "Scoring cross validation #{0}".format(i)
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
+        print "Selected features: {0}".format(cfr.transform(features))
         results.append(score)
 
     #print out the mean of the cross-validated results

@@ -450,7 +450,7 @@ def get_atscc_ground_delay():
         d = {}
     #   print "switching"
         d = {'ground_delay_program_id':int(name)}
-        group = group.sort_index(by="start_time")
+        group = group.sort_index(by="effective_start_time")
         for k, row in enumerate(group.values):
             for j, val in enumerate(row):
                 if group.columns[j] != "ground_delay_program_id":

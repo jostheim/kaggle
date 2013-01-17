@@ -848,7 +848,7 @@ if __name__ == '__main__':
     kind = sys.argv[1]
     if kind == "build_multi":
         pool_queue = []
-        pool = Pool(processes=8)
+        pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             pool_queue.append([subdirname])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)

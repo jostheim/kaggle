@@ -257,7 +257,7 @@ def get_fbwind(prefix):
     del fb_wind_df['fbwindreportid']
     del fb_wind_df['fbwindairportid']
     
-    grouped = fbwind_df.groupby('airportcode')
+    grouped = fb_wind_df.groupby('airportcode')
     groups = []
     i = 0
     for name, group in grouped:
@@ -623,23 +623,26 @@ def get_joined_data(subdirname, force=False):
         events = get_flight_history_events()
         # forget ASDI positioning for now, don't think we have enough information to make positions useful
         asdi_disposition = get_asdi_disposition()
-        asdi_merged = get_asdi_merged()
+        asdi_merged = get_asdi_merged() 
         joiners = [events, asdi_disposition, asdi_merged]
-        per_flights = get_for_flights(df)
-        joiners = [per_flights]
         df = df.join(joiners)
+        per_flights = get_for_flights(df)
+        for per_flight in per_flights:
+            df = df.join(per_flight)
+#        joiners = [per_flights]
+#        df = df.join(joiners)
         metar_arrival = get_metar("arrival")
         metar_departure = get_metar("departure")
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
         fbwind_arrival = get_fbwind("arrival")
         fbwind_departure = get_fbwind("departure")
-        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_on="airport_code")
-        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_on="airport_code")
+        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
         taf_arrival = get_taf("arrival")
-        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_on="airport")
+        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
         taf_departure = get_taf("departure")
-        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_on="airport")
+        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print df.columns
         pickle.dump(df, open("{0}_joined.p".format(subdirname), "wb"))
 #        pd.save(df, "{0}_joined.p".format(subdirname))
@@ -665,6 +668,7 @@ def process_into_features(df, unique_cols):
     df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['runway_departure_diff'] = df['actual_runway_departure'] - df['scheduled_runway_departure']
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+    bag_o_words_dfs = []
     for column, series in df.iteritems():
         # no data, no need to keep it
         #create diff columns for estimates
@@ -701,12 +705,35 @@ def process_into_features(df, unique_cols):
                 del df[column]
         elif dtype_tmp is str:
             print column
-            df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
+            # this part is if we end up with a text column, break it up into bag of words
+            ever_more_than_one_word = False
+            bag_o_words = []
+            for ix_b, val in series.iteritems():
+                words = val.split(" ")
+                words_dict = {}
+                words_dict['flight_history_id'] = ix_b
+                nwords = 0
+                for word in words:
+                    if len(word.strip()) > 0:
+                        words_dict["{0}_{1}".format(column, word.strip())] = 1.0
+                        nwords += 1
+                if nwords > 1:
+                    ever_more_than_one_word = True
+                bag_o_words.append(words_dict)
+            if ever_more_than_one_word:
+                bag_o_words_df = pd.DataFrame(bag_o_words)
+                bag_o_words_df.set_index('flight_history', inplace=True, verify_integrity=True)
+                bag_o_words_dfs.append(bag_o_words_df)
+                del df[column]
+            else:
+                df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
         elif series.dtype is object or str(series.dtype) == "object":
             print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
             #del df[column]
         else:
             print column, dtype_tmp, df.dtypes[column], type_val
+    # join all the bag_o_words columns we found
+    df = df.join(bag_o_words_dfs)
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
     df = df.fillna(0.0)

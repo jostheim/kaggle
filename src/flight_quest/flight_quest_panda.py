@@ -22,7 +22,7 @@ data_rev_prefix = 'InitialTrainingSet_rev1'
 date_prefix = '2012_11_12'
 data_test_rev_prefix = 'SampleTestSet'
 na_values = ["MISSING", "HIDDEN"]
-store = pd.HDFStore('flight_quest.h5')
+#store = pd.HDFStore('flight_quest.h5')
 
 def parse_date_time(val):
     if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
@@ -610,36 +610,44 @@ def get_for_flights(df):
 
 
 def get_joined_data(subdirname, force=False):
+    df = None
     date_prefix = subdirname
-    if "{0}_joined" in store and not force:
-        return store["{0}_joined"]
-    print "Working on {0}".format(subdirname)
-    df = get_flight_history()
-    events = get_flight_history_events()
-    # forget ASDI positioning for now, don't think we have enough information to make positions useful
-    asdi_disposition = get_asdi_disposition()
-    asdi_merged = get_asdi_merged() 
-    joiners = [events, asdi_disposition, asdi_merged]
-    df = df.join(joiners)
-    per_flights = get_for_flights(df)
-    for per_flight in per_flights:
-        df = df.join(per_flight)
+    if os.path.isfile("{0}_joined.p".format(subdirname)) and not force:
+        return None
+    try:
+        df = pd.load("{0}_joined.p".format(subdirname))
+    except Exception as e:
+        print e
+        df = None
+    if df is None:
+        print "Working on {0}".format(subdirname)
+        df = get_flight_history()
+        events = get_flight_history_events()
+        # forget ASDI positioning for now, don't think we have enough information to make positions useful
+        asdi_disposition = get_asdi_disposition()
+        asdi_merged = get_asdi_merged() 
+        joiners = [events, asdi_disposition, asdi_merged]
+        df = df.join(joiners)
+        per_flights = get_for_flights(df)
+        for per_flight in per_flights:
+            df = df.join(per_flight)
 #        joiners = [per_flights]
 #        df = df.join(joiners)
-    metar_arrival = get_metar("arrival")
-    metar_departure = get_metar("departure")
-    df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
-    df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-    fbwind_arrival = get_fbwind("arrival")
-    fbwind_departure = get_fbwind("departure")
-    df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-    df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
-    taf_arrival = get_taf("arrival")
-    df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-    taf_departure = get_taf("departure")
-    df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
-    print df.columns
-    store["{0}_joined".format(subdirname)] = df
+        metar_arrival = get_metar("arrival")
+        metar_departure = get_metar("departure")
+        df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
+        df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+        fbwind_arrival = get_fbwind("arrival")
+        fbwind_departure = get_fbwind("departure")
+        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
+        taf_arrival = get_taf("arrival")
+        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+        taf_departure = get_taf("departure")
+        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
+        print df.columns
+        pickle.dump(df, open("{0}_joined.p".format(subdirname), "wb"))
+#        pd.save(df, "{0}_joined.p".format(subdirname))
     return df
 
 def get_joined_data_proxy(args):
@@ -855,14 +863,19 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
         all_dfs = concat(sample_size=sample_size)
-        store.put('all_df', all_dfs)
+#        store = pd.HDFStore('store.h5')
+#        store['all_df'] = all_dfs
+#        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
+#        pd.save(all_dfs, "all_joined.p")
+        all_dfs.to_csv("all_joined.csv")
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = store['all_df']
+#        store = pd.HDFStore('store.h5')
+#        all_df = store['all_df']
+        all_df = pickle.load(open("all_joined.p", "rb"))
+#        all_df = pd.load("all_joined.p")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
-        print "writing features to store"
-        store[sys.argv[2]] = all_df
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
@@ -871,9 +884,9 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
-        if "features_df" in store:
-            print "reading features from store"
-            all_df = store["features_df"]
+        if os.path.isfile("features.csv"):
+            print "reading features from features.csv"
+            all_df = pd.read_csv("features.csv", index_col=[0], na_values=na_values)
         else:
             unique_cols = {}
             sample_size = None
@@ -882,8 +895,8 @@ if __name__ == '__main__':
             all_df = concat(sample_size=sample_size)
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
-            print "writing features to store"
-            store['features_df'] = all_df
+            print "writing features to features.csv"
+            all_df.to_csv("features.csv")
         print all_df.index
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()

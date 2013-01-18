@@ -616,6 +616,7 @@ def get_joined_data(subdirname, force=False):
     try:
         df = pd.load("{0}_joined.p".format(subdirname))
     except Exception as e:
+        print e
         df = None
     if df is None:
         print "Working on {0}".format(subdirname)

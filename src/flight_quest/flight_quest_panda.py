@@ -633,14 +633,14 @@ def get_for_flights(df):
 
 
 def get_joined_data(subdirname, force=False):
-    df = None
     date_prefix = subdirname
     if os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
-            df = read_dataframe("{0}_joined.p".format(subdirname))
+            df = read_dataframe("{0}_joined".format(subdirname))
+            return df
         except Exception as e:
             print e
-    if df is None:
+    else:
         print "Working on {0}".format(subdirname)
         df = get_flight_history()
         events = get_flight_history_events()
@@ -667,8 +667,8 @@ def get_joined_data(subdirname, force=False):
         taf_departure = get_taf("departure")
         df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
-        write_dataframe("{0}_joined.p".format(subdirname), df)
-    return df
+        write_dataframe("{0}_joined".format(subdirname), df)
+        return df
 
 def get_joined_data_proxy(args):
     subdirname = args[0]

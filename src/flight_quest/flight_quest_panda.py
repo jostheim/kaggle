@@ -36,6 +36,29 @@ def parse_date_time(val):
         return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
+def write_dataframe(name, df):
+    types = []
+    for column, series in df.iteritems():
+        types.append(get_column_type(series))
+    pickle.dump(types, open("{0}.header".format(name), 'wb'))
+    df.to_csv("{0}.csv".format(name))
+
+def read_dataframe(name):
+    types = pickle.load(open("{0}.header".format(name), 'rb'))
+    dates = []
+    for i, typee in enumerate(types):
+        if typee is datetime.datetime:
+            dates.append(i)
+    df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
+    return df
+
+def get_column_type(series):
+    dtype_tmp = None
+    for ix, type_val in series.dropna().iteritems():
+        if type_val is not np.nan and str(type_val) != "nan":
+            dtype_tmp = type(type_val)
+            return dtype_tmp
+        
 def get_flight_history():
     filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
@@ -612,13 +635,11 @@ def get_for_flights(df):
 def get_joined_data(subdirname, force=False):
     df = None
     date_prefix = subdirname
-    if os.path.isfile("{0}_joined.p".format(subdirname)) and not force:
-        return None
-    try:
-        df = pd.load("{0}_joined.p".format(subdirname))
-    except Exception as e:
-        print e
-        df = None
+    if os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
+        try:
+            df = read_dataframe("{0}_joined.p".format(subdirname))
+        except Exception as e:
+            print e
     if df is None:
         print "Working on {0}".format(subdirname)
         df = get_flight_history()
@@ -645,9 +666,8 @@ def get_joined_data(subdirname, force=False):
         df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
         taf_departure = get_taf("departure")
         df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
-        print df.columns
-        pickle.dump(df, open("{0}_joined.p".format(subdirname), "wb"))
-#        pd.save(df, "{0}_joined.p".format(subdirname))
+        print "column type counts: {0}".format(df.get_dtype_counts())
+        write_dataframe("{0}_joined.p".format(subdirname), df)
     return df
 
 def get_joined_data_proxy(args):
@@ -684,11 +704,7 @@ def process_into_features(df, unique_cols):
             print "id column: {0}".format(column)
 #            del df[column]
         # I hate this, but I need to figure out the type and pandas has them as all objects
-        dtype_tmp = None
-        for ix, type_val in series.iteritems():
-            if type_val is not np.nan and str(type_val) != "nan":
-                dtype_tmp = type(type_val)
-                break
+        dtype_tmp = get_column_type(series)
         if dtype_tmp is datetime.datetime:
             # can't use this as this is our target
             if column == "actual_gate_arrival":
@@ -711,6 +727,8 @@ def process_into_features(df, unique_cols):
             ever_more_than_one_word = False
             bag_o_words = []
             for ix_b, val in series.iteritems():
+                if val is np.nan or str(val) == "nan":
+                    continue
                 words = val.split(" ")
                 words_dict = {}
                 words_dict['flight_history_id'] = ix_b
@@ -733,7 +751,7 @@ def process_into_features(df, unique_cols):
             print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
             #del df[column]
         else:
-            print column, dtype_tmp, df.dtypes[column], type_val
+            print column, dtype_tmp, df.dtypes[column]
     # join all the bag_o_words columns we found
     df = df.join(bag_o_words_dfs)
     if "scheduled_runway_departure" in df.columns:
@@ -754,13 +772,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
         return unique_columns
     except Exception as e:
         for i, (column, series) in enumerate(df.iteritems()):
-            dtype_tmp = None
-            type_val = None
-            for ix, type_val in series.iteritems():
-                if type_val is not np.nan and str(type_val) != "nan":
-                    dtype_tmp = type(type_val)
-#                    print dtype_tmp, type_val
-                    break
+            dtype_tmp = get_column_type(series)
             if series.dtype == "object" and dtype_tmp is str:
                 grouped = df.groupby(column)
                 for val, group in grouped:
@@ -771,7 +783,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                     if val not in unique_cols[column]: # append to the unqiue_cols for this column
                         unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
             else:
-                print "not uniquing {0} {1} {2} {3}".format(column, dtype_tmp, series.dtype, type_val)
+                print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
 
 def random_forest_classify(targets, features):
@@ -863,17 +875,10 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
         all_dfs = concat(sample_size=sample_size)
-#        store = pd.HDFStore('store.h5')
-#        store['all_df'] = all_dfs
-#        pickle.dump(all_dfs, open("all_joined.p", 'wb'))
-#        pd.save(all_dfs, "all_joined.p")
-        all_dfs.to_csv("all_joined.csv")
+        write_dataframe("all_joined.csv", all_dfs)
     elif kind == "generate_features":
         unique_cols = {}
-#        store = pd.HDFStore('store.h5')
-#        all_df = store['all_df']
-        all_df = pickle.load(open("all_joined.p", "rb"))
-#        all_df = pd.load("all_joined.p")
+        all_df = read_dataframe("all_joined.csv")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
     elif kind == "uniques":
@@ -886,7 +891,8 @@ if __name__ == '__main__':
     elif kind == "learn":
         if os.path.isfile("features.csv"):
             print "reading features from features.csv"
-            all_df = pd.read_csv("features.csv", index_col=[0], na_values=na_values)
+            
+            all_df = read_dataframe("features.csv")
         else:
             unique_cols = {}
             sample_size = None
@@ -896,7 +902,7 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
             print "writing features to features.csv"
-            all_df.to_csv("features.csv")
+            write_dataframe("features.csv", all_df)
         print all_df.index
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()

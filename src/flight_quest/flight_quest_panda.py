@@ -847,6 +847,7 @@ def concat(sample_size=None):
                     print "all_dfs after",all_dfs.index
                 else:
                     all_dfs = all_dfs.append(df_tmp)
+            pool_queue = []
     for df in results:
         df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)

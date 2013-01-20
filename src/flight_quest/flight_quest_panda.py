@@ -37,10 +37,12 @@ def parse_date_time(val):
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def convert_dates(val):
-    try:
-        return dateutil.parser.parse(val)
-    except Exception as e:
-        return val
+    if type(val) is str:
+        try:
+            return dateutil.parser.parse(val)
+        except Exception as e:
+            return val
+    return val
 
 def write_dataframe(name, df):
     types = []

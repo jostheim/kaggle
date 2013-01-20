@@ -66,7 +66,7 @@ def read_dataframe(name):
         else:
             print "duplicate", ix
     for column, series  in df.iteritems():
-        df[column] = series.dropna().apply(lambda x: convert_dates(x)) 
+        df[column] = series.apply(lambda x: convert_dates(x)) 
     return df
 
 def get_column_type(series):

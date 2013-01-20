@@ -60,11 +60,13 @@ def read_dataframe(name):
             dates.append(i+1)
     df = pd.read_csv("{0}.csv".format(name), index_col=0)
     ids = []
+    print "checking for duplicate indices"
     for ix in df.index:
         if ix not in ids:
             ids.append(ix)
         else:
             print "duplicate", ix
+    print "converting dates"
     for column, series  in df.iteritems():
         df[column] = series.apply(lambda x: convert_dates(x)) 
     return df

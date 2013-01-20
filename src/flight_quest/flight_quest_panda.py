@@ -828,7 +828,7 @@ def concat(sample_size=None):
         print "Working on {0}, {1}, {2}".format(subdirname, i, i%4)
         pool_queue.append(subdirname)
         # if we have 4 subdirs, then execute
-        if i%4 == 0:
+        if i != 0 and i%4 == 0:
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
             for df in results:
                 df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']

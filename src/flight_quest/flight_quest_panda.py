@@ -37,15 +37,10 @@ def parse_date_time(val):
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def convert_dates(val):
-    if type(val) is str and str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
-        #'2012-11-12 17:30:00+00:00
-        try:
-            return dateutil.parser.parse(val)
-        except Exception as e:
-#            print e
-            return val
-    else:
-        return np.nan
+    try:
+        return dateutil.parser.parse(val)
+    except Exception as e:
+        return val
 
 def write_dataframe(name, df):
     types = []

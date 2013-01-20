@@ -37,12 +37,10 @@ def parse_date_time(val):
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def convert_dates(val):
-    if type(val) is str:
-        try:
-            return dateutil.parser.parse(val)
-        except Exception as e:
-            return val
-    return val
+    try:
+        return dateutil.parser.parse(val)
+    except Exception as e:
+        return val
 
 def write_dataframe(name, df):
     types = []
@@ -51,7 +49,7 @@ def write_dataframe(name, df):
     pickle.dump(types, open("{0}.header".format(name), 'wb'))
     df.to_csv("{0}.csv".format(name))
 
-def read_dataframe(name, convert_dates = True):
+def read_dataframe(name, convert_dates_switch = True):
     types = pickle.load(open("{0}.header".format(name), 'rb'))
     dates = []
     for i, typee in enumerate(types):
@@ -65,10 +63,10 @@ def read_dataframe(name, convert_dates = True):
             ids.append(ix)
         else:
             print "duplicate", ix
-    if convert_dates:
+    if convert_dates_switch:
         print "converting dates"
         for column, series  in df.iteritems():
-            df[column] = series.apply(lambda x: convert_dates(x)) 
+            df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
     return df
 
 def get_column_type(series):

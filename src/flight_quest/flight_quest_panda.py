@@ -37,19 +37,19 @@ def parse_date_time(val):
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def write_dataframe(name, df):
-    types = []
+    types = {}
     for column, series in df.iteritems():
-        types.append(get_column_type(series))
+        types[column] = get_column_type(series)
     pickle.dump(types, open("{0}.header".format(name), 'wb'))
     df.to_csv("{0}.csv".format(name))
 
 def read_dataframe(name):
     types = pickle.load(open("{0}.header".format(name), 'rb'))
-    print types
     dates = []
-    for i, typee in enumerate(types):
-        if typee is datetime.datetime:
-            dates.append(i+1)
+    for col in types.keys():
+        if types[col] is datetime.datetime:
+            dates.append(col)
+    print dates
     df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
     return df
 

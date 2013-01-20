@@ -41,7 +41,7 @@ def convert_dates(val):
         #'2012-11-12 17:30:00+00:00
         try:
             return dateutil.parser.parse(val)
-        except ValueError as e:
+        except Exception as e:
 #            print e
             return val
     else:

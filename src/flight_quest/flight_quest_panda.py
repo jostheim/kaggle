@@ -49,7 +49,6 @@ def read_dataframe(name):
     for col in types.keys():
         if types[col] is datetime.datetime:
             dates.append(col)
-    print dates
     df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
     return df
 
@@ -636,13 +635,10 @@ def get_for_flights(df):
 def get_joined_data(subdirname, force=False):
     date_prefix = subdirname
     print subdirname
+    df = None
     if os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         print "trying to restore from file"
-        try:
-            df = read_dataframe("{0}_joined".format(subdirname))
-            return df
-        except Exception as e:
-            print e
+        df = read_dataframe("{0}_joined".format(subdirname))
     else:
         print "Working on {0}".format(subdirname)
         df = get_flight_history()
@@ -671,7 +667,7 @@ def get_joined_data(subdirname, force=False):
         df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
         write_dataframe("{0}_joined".format(subdirname), df)
-        return df
+    return df
 
 def get_joined_data_proxy(args):
     subdirname = args[0]

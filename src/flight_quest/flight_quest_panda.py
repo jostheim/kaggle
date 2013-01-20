@@ -49,6 +49,7 @@ def read_dataframe(name):
     for col in types.keys():
         if types[col] is datetime.datetime:
             dates.append(col)
+    print dates
     df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
     return df
 
@@ -634,11 +635,12 @@ def get_for_flights(df):
 
 def get_joined_data(subdirname, force=False):
     date_prefix = subdirname
-    print subdirname
-    df = None
     if os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
-        print "trying to restore from file"
-        df = read_dataframe("{0}_joined".format(subdirname))
+        try:
+            df = read_dataframe("{0}_joined".format(subdirname))
+            return df
+        except Exception as e:
+            print e
     else:
         print "Working on {0}".format(subdirname)
         df = get_flight_history()
@@ -667,7 +669,7 @@ def get_joined_data(subdirname, force=False):
         df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
         write_dataframe("{0}_joined".format(subdirname), df)
-    return df
+        return df
 
 def get_joined_data_proxy(args):
     subdirname = args[0]
@@ -820,33 +822,10 @@ def random_forest_classify(targets, features):
 
 def concat(sample_size=None):
     all_dfs = None
-    pool_queue = []
-    pool = Pool(processes=4)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        pool_queue.append([subdirname])
-        # if we have 4 subdirs, then execute
-        if len(pool_queue) != 0 and len(pool_queue)%4 == 0:
-            results = pool.map(get_joined_data_proxy, pool_queue, 1)
-            for df in results:
-                df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-                df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-                # we have to have gate_arrival_diff b/c it is the target so reduce set to
-                # non-nan values
-                df_tmp = df.ix[df['gate_arrival_diff'].dropna().index]
-                print "df_tmp.index",df_tmp.index
-                samples = len(df_tmp.index) / 2
-                if samples is not None:
-                    samples = sample_size
-                rows = random.sample(df_tmp.index, samples)
-                df_tmp = df_tmp.ix[rows]
-                if all_dfs is None:
-                    all_dfs = df_tmp
-                    print "all_dfs after",all_dfs.index
-                else:
-                    all_dfs = all_dfs.append(df_tmp)
-            pool_queue = []
-    for df in results:
+        df = get_joined_data(subdirname)
+        print "df.index",df.index
         df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         # we have to have gate_arrival_diff b/c it is the target so reduce set to
@@ -863,7 +842,7 @@ def concat(sample_size=None):
             print "all_dfs after",all_dfs.index
         else:
             all_dfs = all_dfs.append(df_tmp)
-    pool.terminate()    
+    print all_dfs
     return all_dfs
 
 def rebin_targets(targets, nbins):

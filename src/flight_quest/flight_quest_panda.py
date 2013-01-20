@@ -59,8 +59,12 @@ def read_dataframe(name):
         if typee is datetime.datetime:
             dates.append(i+1)
     df = pd.read_csv("{0}.csv".format(name), index_col=0)
+    ids = []
     for ix in df.index:
-        print ix
+        if ix not in ids:
+            ids.append(ix)
+        else:
+            print "duplicate", ix
     for column, series  in df.iteritems():
         df[column] = series.dropna().apply(lambda x: convert_dates(x)) 
     return df

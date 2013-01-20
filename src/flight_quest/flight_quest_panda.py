@@ -44,6 +44,8 @@ def convert_dates(val):
         except ValueError as e:
 #            print e
             return val
+    else:
+        return np.nan
 
 def write_dataframe(name, df):
     types = []

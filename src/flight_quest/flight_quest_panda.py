@@ -54,7 +54,7 @@ def write_dataframe(name, df):
     pickle.dump(types, open("{0}.header".format(name), 'wb'))
     df.to_csv("{0}.csv".format(name))
 
-def read_dataframe(name, convert_dates = False):
+def read_dataframe(name, convert_dates = True):
     types = pickle.load(open("{0}.header".format(name), 'rb'))
     dates = []
     for i, typee in enumerate(types):

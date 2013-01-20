@@ -876,10 +876,10 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
         all_dfs = concat(sample_size=sample_size)
-        write_dataframe("all_joined.csv", all_dfs)
+        write_dataframe("all_joined", all_dfs)
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = read_dataframe("all_joined.csv")
+        all_df = read_dataframe("all_joined")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
     elif kind == "uniques":
@@ -893,7 +893,7 @@ if __name__ == '__main__':
         if os.path.isfile("features.csv"):
             print "reading features from features.csv"
             
-            all_df = read_dataframe("features.csv")
+            all_df = read_dataframe("features")
         else:
             unique_cols = {}
             sample_size = None
@@ -903,7 +903,7 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
             print "writing features to features.csv"
-            write_dataframe("features.csv", all_df)
+            write_dataframe("features", all_df)
         print all_df.index
 #        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()

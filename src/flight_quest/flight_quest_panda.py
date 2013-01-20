@@ -828,7 +828,7 @@ def concat(sample_size=None):
     pool = Pool(processes=4)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        pool_queue.append(subdirname)
+        pool_queue.append([subdirname])
         # if we have 4 subdirs, then execute
         if len(pool_queue) != 0 and len(pool_queue)%4 == 0:
             results = pool.map(get_joined_data_proxy, pool_queue, 1)

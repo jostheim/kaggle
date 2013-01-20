@@ -48,7 +48,7 @@ def read_dataframe(name):
     dates = []
     for i, typee in enumerate(types):
         if typee is datetime.datetime:
-            dates.append(i)
+            dates.append(i+1)
     df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
     return df
 

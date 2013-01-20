@@ -635,7 +635,9 @@ def get_for_flights(df):
 
 def get_joined_data(subdirname, force=False):
     date_prefix = subdirname
+    print subdirname
     if os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
+        print "trying to restore from file"
         try:
             df = read_dataframe("{0}_joined".format(subdirname))
             return df
@@ -824,11 +826,11 @@ def concat(sample_size=None):
     all_dfs = None
     pool_queue = []
     pool = Pool(processes=4)
-    for i, subdirname in enumerate(os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]):
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}, {1}, {2}".format(subdirname, i, i%4)
         pool_queue.append(subdirname)
         # if we have 4 subdirs, then execute
-        if i != 0 and i%4 == 0:
+        if len(pool_queue) != 0 and len(pool_queue)%4 == 0:
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
             for df in results:
                 df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']

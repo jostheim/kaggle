@@ -36,6 +36,15 @@ def parse_date_time(val):
         return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
+def convert_dates(val):
+    if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
+        #'2012-11-12 17:30:00+00:00
+        try:
+            return dateutil.parser.parse(val)
+        except ValueError as e:
+#            print e
+            return val
+
 def write_dataframe(name, df):
     types = []
     for column in df.columns:
@@ -49,9 +58,9 @@ def read_dataframe(name):
     for i, typee in enumerate(types):
         if typee is datetime.datetime:
             dates.append(i+1)
-    df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
-    for i, typee in enumerate(types):
-        print typee, df.columns[i]
+    df = pd.read_csv("{0}.csv".format(name), index_col=0)
+    for column, series  in df.iteritems():
+        df[column] = series.dropna().apply(lambda x: convert_dates(x)) 
     return df
 
 def get_column_type(series):

@@ -825,7 +825,7 @@ def concat(sample_size=None):
     pool_queue = []
     pool = Pool(processes=4)
     for i, subdirname in enumerate(os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]):
-        print "Working on {0}".format(subdirname)
+        print "Working on {0}, {1}, {2}".format(subdirname, i, i%4)
         pool_queue.append(subdirname)
         # if we have 4 subdirs, then execute
         if i%4 == 0:

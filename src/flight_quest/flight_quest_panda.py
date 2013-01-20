@@ -50,6 +50,8 @@ def read_dataframe(name):
         if typee is datetime.datetime:
             dates.append(i+1)
     df = pd.read_csv("{0}.csv".format(name), index_col=0, parse_dates=dates, date_parser=parse_date_time)
+    for i, typee in enumerate(types):
+        print typee, df.columns[i]
     return df
 
 def get_column_type(series):

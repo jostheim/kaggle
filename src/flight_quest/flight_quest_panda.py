@@ -741,7 +741,7 @@ def process_into_features(df, unique_cols):
             for ix_b, val in series.iteritems():
                 if val is np.nan or str(val) == "nan" or type(val) is not str:
                     if type(val) is not str:
-                        print "type was supposed to be str but was", val, ix_b
+                        print "type was supposed to be str but was", val, ix_b, column
                     continue
                 if type(val) is not str:
                     print column, val, ix_b

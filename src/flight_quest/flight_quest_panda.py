@@ -746,6 +746,8 @@ def process_into_features(df, unique_cols):
             for ix_b, val in series.iteritems():
                 if val is np.nan or str(val) == "nan":
                     continue
+                if type(val) is not str:
+                    print column, val, ix_b
                 words = val.split(" ")
                 words_dict = {}
                 words_dict['flight_history_id'] = ix_b

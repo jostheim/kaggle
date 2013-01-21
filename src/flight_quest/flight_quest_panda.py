@@ -762,7 +762,7 @@ def process_into_features(df, unique_cols):
                 bag_o_words_dfs.append(bag_o_words_df)
                 del df[column]
             else:
-                df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is not np.nan and str(x) != "nan" else np.nan)
+                df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and type(x) is not np.nan and str(x) != "nan" else np.nan)
         elif series.dtype is object or str(series.dtype) == "object":
             print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
             #del df[column]

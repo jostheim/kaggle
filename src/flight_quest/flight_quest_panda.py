@@ -56,17 +56,11 @@ def read_dataframe(name, convert_dates_switch = True):
         if typee is datetime.datetime:
             dates.append(i+1)
     df = pd.read_csv("{0}.csv".format(name), index_col=0)
-    ids = []
-    print "checking for duplicate indices"
-    for ix in df.index:
-        if ix not in ids:
-            ids.append(ix)
-        else:
-            print "duplicate", ix
     if convert_dates_switch:
         print "converting dates"
         for column, series  in df.iteritems():
             df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
+    print "dropping duplicates"
     df.drop_duplicates(take_last=True, inplace=True)
     return df
 
@@ -745,7 +739,9 @@ def process_into_features(df, unique_cols):
             ever_more_than_one_word = False
             bag_o_words = []
             for ix_b, val in series.iteritems():
-                if val is np.nan or str(val) == "nan":
+                if val is np.nan or str(val) == "nan" or type(val) is not str:
+                    if type(val) is not str:
+                        print "type was supposed to be str but was", val, ix_b
                     continue
                 if type(val) is not str:
                     print column, val, ix_b

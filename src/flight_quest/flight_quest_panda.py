@@ -67,6 +67,7 @@ def read_dataframe(name, convert_dates_switch = True):
         print "converting dates"
         for column, series  in df.iteritems():
             df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
+    df.drop_duplicates(take_last=True, inplace=True)
     return df
 
 def get_column_type(series):

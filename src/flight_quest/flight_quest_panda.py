@@ -22,6 +22,7 @@ data_rev_prefix = 'InitialTrainingSet_rev1'
 date_prefix = '2012_11_12'
 data_test_rev_prefix = 'SampleTestSet'
 na_values = ["MISSING", "HIDDEN"]
+do_not_convert_to_date = ["icao_aircraft_type_actual"]
 #store = pd.HDFStore('flight_quest.h5')
 
 def parse_date_time(val):
@@ -59,7 +60,8 @@ def read_dataframe(name, convert_dates_switch = True):
     if convert_dates_switch:
         print "converting dates"
         for column, series  in df.iteritems():
-            df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
+            if column not in do_not_convert_to_date:
+                df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
     print "dropping duplicates"
     df.drop_duplicates(take_last=True, inplace=True)
     return df
@@ -731,7 +733,7 @@ def process_into_features(df, unique_cols):
             # set the diff to be in minutes
             df['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
             # delete the original 
-            if column != "scheduled_runway_departure":
+            if column != "scheduled_runway_departure" and column != "scheduled_gate_arrival" and column != "scheduled_runway_arrival":
                 del df[column]
         elif dtype_tmp is str:
             print column
@@ -772,6 +774,10 @@ def process_into_features(df, unique_cols):
     df = df.join(bag_o_words_dfs)
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
+    if "scheduled_gate_arrival" in df.columns:
+        del df["scheduled_gate_arrival"]
+    if "scheduled_runway_arrival" in df.columns:
+        del df["scheduled_runway_arrival"]
     df = df.fillna(0.0)
     df = df.convert_objects()
     for i, (column, series) in enumerate(df.iteritems()):

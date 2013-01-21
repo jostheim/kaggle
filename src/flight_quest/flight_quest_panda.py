@@ -762,6 +762,7 @@ def process_into_features(df, unique_cols):
                 bag_o_words_df = pd.DataFrame(bag_o_words)
                 bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
                 bag_o_words_dfs.append(bag_o_words_df)
+                bag_o_words_dfs.drop_duplicates(take_last=True, inplace=True)
                 del df[column]
             else:
                 df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and type(x) is not np.nan and str(x) != "nan" else np.nan)

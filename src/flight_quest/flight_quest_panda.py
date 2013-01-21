@@ -760,7 +760,7 @@ def process_into_features(df, unique_cols):
                 bag_o_words.append(words_dict)
             if ever_more_than_one_word:
                 bag_o_words_df = pd.DataFrame(bag_o_words)
-                bag_o_words_df.set_index('flight_history', inplace=True, verify_integrity=True)
+                bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
                 bag_o_words_dfs.append(bag_o_words_df)
                 del df[column]
             else:

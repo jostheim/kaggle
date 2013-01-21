@@ -860,6 +860,7 @@ def concat(sample_size=None):
             print "all_dfs after",all_dfs.index
         else:
             all_dfs = all_dfs.append(df_tmp)
+            all_dfs.drop_duplicates(take_last=True, inplace=True)
     print all_dfs
     return all_dfs
 

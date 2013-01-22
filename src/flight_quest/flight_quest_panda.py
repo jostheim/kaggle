@@ -744,27 +744,27 @@ def process_into_features(df, unique_cols):
             elif dtype_tmp is str:
                 print column
                 # this part is if we end up with a text column, break it up into bag of words
-                for ix_b, val in series.iteritems():
-                    if val is np.nan or str(val) == "nan" or type(val) is not str:
-                        if type(val) is not str:
-                            print "type was supposed to be str but was", val, ix_b, column
-                        continue
-                    words = val.split(" ")
-                    words_dict = {}
-                    if ix_b in bag_o_words:
-                        words_dict = bag_o_words[ix_b]
-                    words_dict['flight_history_id'.format()] = ix_b
-                    nwords = 0
-                    for word in words:
-                        if len(word.strip()) > 0:
-                            words_dict["{0}_{1}".format(column, word.strip())] = 1.0
-                            nwords += 1
-                    if nwords > 1:
-                        bag_o_words[ix_b] = words_dict
-                        if column not in bag_o_words_columns_to_delete:
-                            bag_o_words_columns_to_delete.append(column)
-                else:
-                    df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
+#                for ix_b, val in series.iteritems():
+#                    if val is np.nan or str(val) == "nan" or type(val) is not str:
+#                        if type(val) is not str:
+#                            print "type was supposed to be str but was", val, ix_b, column
+#                        continue
+#                    words = val.split(" ")
+#                    words_dict = {}
+#                    if ix_b in bag_o_words:
+#                        words_dict = bag_o_words[ix_b]
+#                    words_dict['flight_history_id'.format()] = ix_b
+#                    nwords = 0
+#                    for word in words:
+#                        if len(word.strip()) > 0:
+#                            words_dict["{0}_{1}".format(column, word.strip())] = 1.0
+#                            nwords += 1
+#                    if nwords > 1:
+#                        bag_o_words[ix_b] = words_dict
+#                        if column not in bag_o_words_columns_to_delete:
+#                            bag_o_words_columns_to_delete.append(column)
+#                else:
+                df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
             elif series.dtype is object or str(series.dtype) == "object":
                 print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
                 #del df[column]

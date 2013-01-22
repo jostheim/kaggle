@@ -39,7 +39,10 @@ def parse_date_time(val):
 
 def convert_dates(val):
     try:
-        return dateutil.parser.parse(val)
+        datetime_obj = dateutil.parser.parse(val)
+        datetime_obj = datetime_obj.replace(tzinfo=timezone('UTC'))
+        datetime_obj = datetime_obj.astimezone(timezone('UTC'))
+        return datetime_obj
     except Exception as e:
         return val
 

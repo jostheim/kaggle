@@ -704,7 +704,8 @@ def process_into_features(df, unique_cols):
     df['gate_departure_diff'] = df['gate_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['runway_departure_diff'] = df['actual_runway_departure'] - df['scheduled_runway_departure']
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-    bag_o_words_dfs = []
+    bag_o_words = {}
+    bag_o_words_columns_to_delete = []
     for column, series in df.iteritems():
         # no data, no need to keep it
         #create diff columns for estimates
@@ -738,32 +739,25 @@ def process_into_features(df, unique_cols):
         elif dtype_tmp is str:
             print column
             # this part is if we end up with a text column, break it up into bag of words
-            ever_more_than_one_word = False
-            bag_o_words = []
             for ix_b, val in series.iteritems():
                 if val is np.nan or str(val) == "nan" or type(val) is not str:
                     if type(val) is not str:
                         print "type was supposed to be str but was", val, ix_b, column
                     continue
-                if type(val) is not str:
-                    print column, val, ix_b
                 words = val.split(" ")
                 words_dict = {}
-                words_dict['flight_history_id'] = ix_b
+                if ix_b in bag_o_words:
+                    words_dict = bag_o_words[ix_b]
+                words_dict['flight_history_id'.format()] = ix_b
                 nwords = 0
                 for word in words:
                     if len(word.strip()) > 0:
                         words_dict["{0}_{1}".format(column, word.strip())] = 1.0
                         nwords += 1
                 if nwords > 1:
-                    ever_more_than_one_word = True
-                bag_o_words.append(words_dict)
-            if ever_more_than_one_word:
-                bag_o_words_df = pd.DataFrame(bag_o_words)
-                bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-                bag_o_words_dfs.append(bag_o_words_df)
-                bag_o_words_dfs.drop_duplicates(take_last=True, inplace=True)
-                del df[column]
+                    bag_o_words[ix_b] = words_dict
+                    if column not in bag_o_words_columns_to_delete:
+                        bag_o_words_columns_to_delete.append(column)
             else:
                 df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and type(x) is not np.nan and str(x) != "nan" else np.nan)
         elif series.dtype is object or str(series.dtype) == "object":
@@ -772,7 +766,12 @@ def process_into_features(df, unique_cols):
         else:
             print column, dtype_tmp, df.dtypes[column]
     # join all the bag_o_words columns we found
-    df = df.join(bag_o_words_dfs)
+    bag_o_words_df = pd.DataFrame(bag_o_words.values())
+    bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    df = df.join(bag_o_words_df)
+    # delete the original column that made the bag o words
+    for delete_column in bag_o_words_columns_to_delete:
+        del df[delete_column]
     if "scheduled_runway_departure" in df.columns:
         del df["scheduled_runway_departure"]
     if "scheduled_gate_arrival" in df.columns:

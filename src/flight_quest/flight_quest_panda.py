@@ -768,8 +768,6 @@ def process_into_features(df, unique_cols):
             elif series.dtype is object or str(series.dtype) == "object":
                 print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
                 #del df[column]
-            else:
-                print column, dtype_tmp, df.dtypes[column]
         except Exception as e:
             print e
             import traceback

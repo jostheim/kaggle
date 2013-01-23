@@ -927,8 +927,8 @@ if __name__ == '__main__':
             for i, (column, series) in enumerate(all_df.iteritems()):
                 if series.dtype is object or str(series.dtype) == "object":
                     print "AFter convert types {0} is still an object".format(column)
-                    print series
-                    del df[column]
+                    print "is all nan"+len(series.dropna())
+                    del all_df[column]
         else:
             unique_cols = {}
             sample_size = None

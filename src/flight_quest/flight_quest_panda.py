@@ -911,6 +911,7 @@ if __name__ == '__main__':
         all_df = read_dataframe("all_joined")
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
+        write_dataframe("features", all_df)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
@@ -921,7 +922,6 @@ if __name__ == '__main__':
     elif kind == "learn":
         if os.path.isfile("features.csv"):
             print "reading features from features.csv"
-            
             all_df = read_dataframe("features")
         else:
             unique_cols = {}

@@ -686,6 +686,7 @@ def get_joined_data(subdirname, force=False):
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
         write_dataframe("{0}_joined".format(subdirname), df)
+        df = read_dataframe("{0}_joined".format(subdirname))
         return df
 
 def get_joined_data_proxy(args):

@@ -667,22 +667,22 @@ def get_joined_data(subdirname, force=False):
         joiners = [events, asdi_disposition, asdi_merged]
         df = df.join(joiners)
         per_flights = get_for_flights(df)
-        for per_flight in per_flights:
-            df = df.join(per_flight)
-#        joiners = [per_flights]
-#        df = df.join(joiners)
+#        for per_flight in per_flights:
+#            df = df.join(per_flight)
+        joiners = [per_flights]
+        df = df.join(joiners)
         metar_arrival = get_metar("arrival")
         metar_departure = get_metar("departure")
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-        fbwind_arrival = get_fbwind("arrival")
-        fbwind_departure = get_fbwind("departure")
-        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
-        taf_arrival = get_taf("arrival")
-        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-        taf_departure = get_taf("departure")
-        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
+#        fbwind_arrival = get_fbwind("arrival")
+#        fbwind_departure = get_fbwind("departure")
+#        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+#        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
+#        taf_arrival = get_taf("arrival")
+#        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+#        taf_departure = get_taf("departure")
+#        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
         write_dataframe("{0}_joined".format(subdirname), df)
         return df

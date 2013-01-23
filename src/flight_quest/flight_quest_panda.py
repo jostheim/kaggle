@@ -837,8 +837,9 @@ def random_forest_classify(targets, features):
         print cfr.feature_importances_
         features_list = []
         for j, importance in enumerate(cfr.feature_importances_):
-            column = features.columns[j]
-            features_list.append((column, importance))
+            if importance > 0.0:
+                column = features.columns[j]
+                features_list.append((column, importance))
         features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
         print "Features importance"
         for j, tup in enumerate(features_list):

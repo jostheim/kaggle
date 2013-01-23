@@ -773,9 +773,9 @@ def process_into_features(df, unique_cols):
             import traceback
             print traceback.format_exc()
     # join all the bag_o_words columns we found
-    bag_o_words_df = pd.DataFrame(bag_o_words.values())
-    bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-    df = df.join(bag_o_words_df)
+#    bag_o_words_df = pd.DataFrame(bag_o_words.values())
+#    bag_o_words_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+#    df = df.join(bag_o_words_df)
     # delete the original column that made the bag o words
     for delete_column in bag_o_words_columns_to_delete:
         del df[delete_column]

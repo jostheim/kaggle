@@ -670,7 +670,7 @@ def get_joined_data(subdirname, force=False):
         per_flights = get_for_flights(df)
 #        for per_flight in per_flights:
 #            df = df.join(per_flight)
-        joiners = [per_flights]
+        joiners = per_flights
         df = df.join(joiners)
         metar_arrival = get_metar("arrival")
         metar_departure = get_metar("departure")

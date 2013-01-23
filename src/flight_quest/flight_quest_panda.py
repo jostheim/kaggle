@@ -23,7 +23,7 @@ date_prefix = '2012_11_12'
 data_test_rev_prefix = 'SampleTestSet'
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
-#store = pd.HDFStore('flight_quest.h5')
+store = pd.HDFStore('flight_quest.h5')
 
 def parse_date_time(val):
     if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
@@ -47,27 +47,28 @@ def convert_dates(val):
         return val
 
 def write_dataframe(name, df):
-    types = []
-    for column in df.columns:
-        types.append(get_column_type(df[column]))
-    pickle.dump(types, open("{0}.header".format(name), 'wb'))
-    df.to_csv("{0}.csv".format(name))
+#    types = []
+#    for column in df.columns:
+#        types.append(get_column_type(df[column]))
+#    pickle.dump(types, open("{0}.header".format(name), 'wb'))
+#    df.to_csv("{0}.csv".format(name))
+    store[name] = df
 
 def read_dataframe(name, convert_dates_switch = True):
-    types = pickle.load(open("{0}.header".format(name), 'rb'))
-    dates = []
-    for i, typee in enumerate(types):
-        if typee is datetime.datetime:
-            dates.append(i+1)
-    df = pd.read_csv("{0}.csv".format(name), index_col=0)
-    if convert_dates_switch:
-        print "converting dates"
-        for column, series  in df.iteritems():
-            if column not in do_not_convert_to_date:
-                df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
-    print "dropping duplicates"
-    df.drop_duplicates(take_last=True, inplace=True)
-    return df
+#    types = pickle.load(open("{0}.header".format(name), 'rb'))
+#    dates = []
+#    for i, typee in enumerate(types):
+#        if typee is datetime.datetime:
+#            dates.append(i+1)
+#    df = pd.read_csv("{0}.csv".format(name), index_col=0)
+#    if convert_dates_switch:
+#        print "converting dates"
+#        for column, series  in df.iteritems():
+#            if column not in do_not_convert_to_date:
+#                df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
+#    print "dropping duplicates"
+#    df.drop_duplicates(take_last=True, inplace=True)
+    return store[name]
 
 def get_column_type(series):
     dtype_tmp = None

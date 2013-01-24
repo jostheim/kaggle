@@ -792,7 +792,6 @@ def process_into_features(df, unique_cols):
         del df["scheduled_gate_arrival"]
     if "scheduled_runway_arrival" in df.columns:
         del df["scheduled_runway_arrival"]
-    df = df.fillna(0.0)
 #    df = df.convert_objects()
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
@@ -952,7 +951,6 @@ if __name__ == '__main__':
         # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=5))
         print targets
-        print all_df['gate_arrival_diff'].dropna()
         features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]
         # remove the target from the features
         del features['gate_arrival_diff']

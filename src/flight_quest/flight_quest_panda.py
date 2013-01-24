@@ -25,6 +25,9 @@ na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
 store = pd.HDFStore('flight_quest.h5')
 
+def myround(x, base=5):
+    return int(base * round(float(x)/base))
+
 def parse_date_time(val):
     if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
         #'2012-11-12 17:30:00+00:00
@@ -931,7 +934,8 @@ if __name__ == '__main__':
             for i, (column, series) in enumerate(all_df.iteritems()):
                 if series.dtype is object or str(series.dtype) == "object":
                     print "AFter convert types {0} is still an object".format(column)
-                    print "is all nan {0}".format(len(series.dropna()))
+                    if len(series.dropna()) > 0:
+                        print "is all nan and not 0:  {0}".format(len(series.dropna()))
                     del all_df[column]
         else:
             unique_cols = {}
@@ -944,8 +948,9 @@ if __name__ == '__main__':
             print "writing features to features.csv"
             write_dataframe("features", all_df)
         print all_df.index
-#        # may want to rebin here
         targets = all_df['gate_arrival_diff'].dropna()
+        # may want to rebin here, rounding to 5 minutes
+        targets = targets.apply(lambda x: myround(x, base=5))
         print targets
         print all_df['gate_arrival_diff'].dropna()
         features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]

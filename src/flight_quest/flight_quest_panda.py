@@ -652,7 +652,7 @@ def get_for_flights(df):
 
 def get_joined_data(subdirname, force=False):
     date_prefix = subdirname
-    if "{0}_joined" in store: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
+    if "joined_{0}" in store: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
             df = read_dataframe("{0}_joined".format(subdirname))
             return df
@@ -685,8 +685,8 @@ def get_joined_data(subdirname, force=False):
 #        taf_departure = get_taf("departure")
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
-        write_dataframe("{0}_joined".format(subdirname), df)
-        df = read_dataframe("{0}_joined".format(subdirname))
+        write_dataframe("joined_{0}".format(subdirname), df)
+        df = read_dataframe("joined_{0}".format(subdirname))
         print df
         return df
 

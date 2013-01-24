@@ -925,8 +925,8 @@ if __name__ == '__main__':
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
-        if os.path.isfile("features.csv"):
-            print "reading features from features.csv"
+        if "features" in store:
+            print "reading features from store"
             all_df = read_dataframe("features")
             for i, (column, series) in enumerate(all_df.iteritems()):
                 if series.dtype is object or str(series.dtype) == "object":

@@ -112,7 +112,7 @@ def get_metar(prefix):
             prefix1 = k
             if k == 0:
                 prefix1 = "first"
-            if k == len(group.values):
+            if k == len(group.values)-1:
                 prefix1 = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "weather_station_code":
@@ -368,7 +368,7 @@ def get_flight_history_events():
             prefix = k
             if k == 0:
                 prefix = "first"
-            if k == len(group.values):
+            if k == len(group.values)-1:
                 prefix = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "flight_history_id":
@@ -428,7 +428,7 @@ def get_asdi_disposition():
             prefix = k
             if k == 0:
                 prefix = "first"
-            if k == len(group.values):
+            if k == len(group.values)-1:
                 prefix = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "flighthistoryid":
@@ -460,7 +460,7 @@ def get_asdi_merged():
             prefix = group.index[k][1]
             if k == 0:
                 prefix = "first"
-            if k == len(group.values):
+            if k == len(group.values)-1:
                 prefix = "last"
             for j, val in enumerate(row):
                 if "asdiflightplanid" not in d:

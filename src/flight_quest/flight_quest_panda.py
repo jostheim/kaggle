@@ -109,10 +109,14 @@ def get_metar(prefix):
         d = {'weather_station_code':name}
         group = group.sort_index(by='date_time_issued')
         for k, row in enumerate(group.values):
-    #        print row
+            prefix1 = k
+            if k == 0:
+                prefix1 = "first"
+            if k == len(group.values):
+                prefix1 = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "weather_station_code":
-                    d["{0}_{1}_{2}".format(prefix, k, group.columns[j])] = val
+                    d["{0}_{1}_{2}".format(prefix, prefix1, group.columns[j])] = val
         groups.append(d)
         i += 1
     tmp_df = pd.DataFrame(groups)
@@ -358,14 +362,17 @@ def get_flight_history_events():
     i = 0
     for name, group in grouped:
         d = {}
-    #   print "switching"
         d = {'flight_history_id':int(name)}
         group = group.sort_index(by='date_time_recorded')
         for k, row in enumerate(group.values):
-    #        print row
+            prefix = k
+            if k == 0:
+                prefix = "first"
+            if k == len(group.values):
+                prefix = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "flight_history_id":
-                    d["{0}_{1}".format(k, group.columns[j])] = val
+                    d["{0}_{1}".format(prefix, group.columns[j])] = val
         groups.append(d)
         i += 1
     tmp_df = pd.DataFrame(groups)
@@ -418,10 +425,14 @@ def get_asdi_disposition():
         d = {'flight_history_id':int(name)}
         group = group.sort_index(by='received')
         for k, row in enumerate(group.values):
-    #        print row
+            prefix = k
+            if k == 0:
+                prefix = "first"
+            if k == len(group.values):
+                prefix = "last"
             for j, val in enumerate(row):
                 if group.columns[j] != "flighthistoryid":
-                    d["{0}_{1}".format(k, group.columns[j])] = val
+                    d["{0}_{1}".format(prefix, group.columns[j])] = val
         groups.append(d)
         i += 1
     tmp_df = pd.DataFrame(groups)
@@ -446,12 +457,16 @@ def get_asdi_merged():
         #print group.index[n]
         #group = group.sort_index(by='ordinal')
         for k, row in enumerate(group.values):
-            #print row, group.index[k]
+            prefix = group.index[k][1]
+            if k == 0:
+                prefix = "first"
+            if k == len(group.values):
+                prefix = "last"
             for j, val in enumerate(row):
                 if "asdiflightplanid" not in d:
                     d["asdiflightplanid"] = group.index[k][0]
                 if group.columns[j] != "asdiflightplanid":
-                    d["{0}_{1}".format(group.index[k][1], group.columns[j])] = val
+                    d["{0}_{1}".format(prefix, group.columns[j])] = val
         groups.append(d)
         i += 1
     tmp_df = pd.DataFrame(groups)

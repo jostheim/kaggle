@@ -670,7 +670,7 @@ def get_for_flights(df):
 
 def get_joined_data(subdirname, force=False):
     date_prefix = subdirname
-    print "joined_{0}".format(subdirname) in store
+    print "joined_{0}".format(subdirname) in store, "force: {0}".format(force)
     if "joined_{0}".format(subdirname) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
             df = read_dataframe("joined_{0}".format(subdirname))

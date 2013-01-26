@@ -847,7 +847,7 @@ def random_forest_classify(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=8,
+        n_jobs=1,
         random_state=0,
         )
         print "Fitting cross validation #{0}".format(i)

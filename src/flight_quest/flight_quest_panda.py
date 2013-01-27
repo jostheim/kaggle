@@ -85,6 +85,11 @@ def get_flight_history():
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     return df
 
+def get_test_flight_history():
+    filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_test_rev_prefix, date_prefix)
+    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
+    return df
+
 def get_metar(prefix):
     filename = "{0}/{1}/{2}/metar/flightstats_metarreports_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     metar_df = pd.read_csv(filename, index_col=['metar_reports_id'], parse_dates=[2], date_parser=parse_date_time, na_values=na_values)
@@ -836,6 +841,26 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
 
+def unique_classes(targets, traincv):
+    sorted_targets = sorted(targets[traincv])
+    unique_classes = []
+    for sorted_target in sorted_targets:
+        if sorted_target not in unique_classes:
+            unique_classes.append(sorted_target)
+    unique_classes = np.array(unique_classes)
+    return unique_classes
+
+
+def metric(cfr, features, testcv, unique_classes):
+    sum_diff = 0.0
+    p = cfr.predict_proba(features[testcv])
+    for k, target in enumerate(targets[testcv]):
+        # expectation across all classes
+        expectation = np.sum(unique_classes*p[k])
+        sum_diff += np.sqrt(np.power((expectation - target),2))
+    mean_diff = sum_diff/float(len(targets))
+    return mean_diff
+
 def random_forest_classify(targets, features):
     cv = cross_validation.KFold(len(features), k=5, indices=False)
     #iterate through the training and test cross validation segments and
@@ -862,9 +887,11 @@ def random_forest_classify(targets, features):
                 column = features.columns[j]
                 features_list.append((column, importance))
         features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
-        print "Features importance"
         for j, tup in enumerate(features_list):
             print j, tup
+        unique_classes = unique_classes(targets, traincv)
+        mean_diff = metric(cfr, features, testcv, unique_classes)
+        print "Features importance"
         results.append(score)
 
     #print out the mean of the cross-validated results
@@ -874,7 +901,12 @@ def concat(sample_size=None):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
+        date_prefix = subdirname
         df = get_joined_data(subdirname)
+        test_df = get_test_flight_history()
+        # takes a diff of the indices
+        test_indices = df.index - test_df.index
+        df = df.ix[test_indices]
         print "df.index",df.index
         df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
@@ -961,10 +993,9 @@ if __name__ == '__main__':
             all_df = process_into_features(all_df, unique_cols)
             print "writing features to features.csv"
             write_dataframe("features", all_df)
-        print all_df.index
         targets = all_df['gate_arrival_diff'].dropna()
         # may want to rebin here, rounding to 5 minutes
-        targets = targets.apply(lambda x: myround(x, base=5))
+        targets = targets.apply(lambda x: myround(x, base=1))
         print targets
         features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]
         # remove the target from the features

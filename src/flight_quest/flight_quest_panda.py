@@ -87,7 +87,9 @@ def get_flight_history():
 
 def get_test_flight_history():
     filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_test_rev_prefix, date_prefix)
-    df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
+    df = None
+    if os.path.isfile(filename):
+        df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     return df
 
 def get_metar(prefix):
@@ -904,9 +906,10 @@ def concat(sample_size=None):
         date_prefix = subdirname
         df = get_joined_data(subdirname)
         test_df = get_test_flight_history()
-        # takes a diff of the indices
-        test_indices = df.index - test_df.index
-        df = df.ix[test_indices]
+        if test_df is not None:
+            # takes a diff of the indices
+            test_indices = df.index - test_df.index
+            df = df.ix[test_indices]
         print "df.index",df.index
         df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)

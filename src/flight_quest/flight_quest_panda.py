@@ -839,7 +839,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
 
-def unique_classes(targets, traincv):
+def get_unique_classes(targets, traincv):
     sorted_targets = sorted(targets[traincv])
     unique_classes = []
     for sorted_target in sorted_targets:
@@ -849,7 +849,7 @@ def unique_classes(targets, traincv):
     return unique_classes
 
 
-def metric(cfr, features, testcv, unique_classes):
+def get_metric(cfr, features, testcv, unique_classes):
     sum_diff = 0.0
     p = cfr.predict_proba(features[testcv])
     for k, target in enumerate(targets[testcv]):
@@ -878,19 +878,19 @@ def random_forest_classify(targets, features):
         print "Scoring cross validation #{0}".format(i)
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
-        print cfr.feature_importances_
-        features_list = []
-        for j, importance in enumerate(cfr.feature_importances_):
-            if importance > 0.0:
-                column = features.columns[j]
-                features_list.append((column, importance))
-        features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
-        for j, tup in enumerate(features_list):
-            print j, tup
-        unique_classes = unique_classes(targets, traincv)
-        mean_diff = metric(cfr, features, testcv, unique_classes)
-        print "Features importance"
-        results.append(score)
+#        print "Features importance"
+#        features_list = []
+#        for j, importance in enumerate(cfr.feature_importances_):
+#            if importance > 0.0:
+#                column = features.columns[j]
+#                features_list.append((column, importance))
+#        features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
+#        for j, tup in enumerate(features_list):
+#            print j, tup
+        unique_classes = get_unique_classes(targets, traincv)
+        mean_diff = get_metric(cfr, features, testcv, unique_classes)
+        print "Mean difference: {0}".format(mean_diff)
+        results.append(mean_diff)
 
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )

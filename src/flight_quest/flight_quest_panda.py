@@ -16,6 +16,8 @@ from pytz import timezone
 from flight_history_events import get_estimated_gate_arrival_string, get_estimated_runway_arrival_string
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
+import traceback
+
 
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
@@ -519,6 +521,8 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix):
                     d["{0}_{1}".format(k, group.columns[j])] = val
         groups.append(d)
         i += 1
+    if len(groups) == 0:
+        return None
     atsccgrounddelayairports_tmp_df = pd.DataFrame(groups)
     atsccgrounddelayairports_tmp_df.set_index('ground_delay_program_id', inplace=True, verify_integrity=True)
     atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_df, atsccgrounddelayairports_tmp_df, how="left", left_index=True, right_index=True)
@@ -566,7 +570,9 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     atsccdelay_df = get_atscc_delay(data_prefix, data_rev_prefix, date_prefix)
     atsccdeicing_df = get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix)
     arrival_ground_delays = []
+    arrival_ground_delays_df = None
     departure_ground_delays = []
+    departure_ground_delays = None
     arrival_delays = []
     departure_delays = []
     arrival_icing_delays = []
@@ -700,10 +706,11 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, force=False):
         joiners = [events, asdi_disposition, asdi_merged]
         df = df.join(joiners)
         per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix)
-#        for per_flight in per_flights:
-#            df = df.join(per_flight)
-        joiners = per_flights
-        df = df.join(joiners)
+        for per_flight in per_flights:
+            if per_flight is not None:
+                df = df.join(per_flight)
+#        joiners = per_flights
+#        df = df.join(joiners)
         metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix)
         metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix)
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
@@ -726,7 +733,13 @@ def get_joined_data_proxy(args):
     data_prefix = args[0]
     data_rev_prefix = args[1]
     date_prefix = args[2]
-    return get_joined_data(data_prefix, data_rev_prefix, date_prefix)
+    ret = None
+    try:
+        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix)
+    except Exception as e:
+        print e
+        print traceback.format_exc()
+    return ret
 
 def handle_datetime(x, initial):
     pass

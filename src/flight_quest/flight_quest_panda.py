@@ -687,7 +687,8 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store, force=False):
+def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False):
+    store = pd.HDFStore(store_filename)
     print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
     if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
@@ -732,10 +733,10 @@ def get_joined_data_proxy(args):
     data_prefix = args[0]
     data_rev_prefix = args[1]
     date_prefix = args[2]
-    store = args[3]
+    store_filename = args[3]
     ret = None
     try:
-        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store)
+        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename)
     except Exception as e:
         print e
         print traceback.format_exc()
@@ -968,6 +969,7 @@ def rebin_targets(targets, nbins):
 
 if __name__ == '__main__':
     store = pd.HDFStore('flight_quest.h5')
+    store_filename = 'flight_quest.h5'
     data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
@@ -978,14 +980,14 @@ if __name__ == '__main__':
         pool_queue = []
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store])
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            get_joined_data(data_prefix, data_rev_prefix, subdirname, store)
+            get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store)
+            get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
     elif kind == "concat":
         sample_size = None
         if len(sys.argv) > 2:

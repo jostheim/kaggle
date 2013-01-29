@@ -732,13 +732,16 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     return df
 
 def get_joined_data_proxy(args):
+    ''' Returns true or false if the join was successful '''
     data_prefix = args[0]
     data_rev_prefix = args[1]
     date_prefix = args[2]
     store_filename = args[3]
-    ret = None
+    ret = False
     try:
-        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename)
+        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename)
+        if df is not None:
+            ret = True
     except Exception as e:
         print e
         print traceback.format_exc()

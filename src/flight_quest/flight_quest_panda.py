@@ -78,27 +78,27 @@ def get_column_type(series):
             return dtype_tmp
         
 def get_flight_history(data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
     df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     return df
 
 def get_test_flight_history(data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}/{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_test_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_test_rev_prefix, date_prefix)
     df = None
     if os.path.isfile(filename):
         df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     return df
 
 def get_metar(prefix, data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}/{1}/{2}/metar/flightstats_metarreports_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/metar/flightstats_metarreports_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     metar_df = pd.read_csv(filename, index_col=['metar_reports_id'], parse_dates=[2], date_parser=parse_date_time, na_values=na_values)
-    filename = "{0}/{1}/{2}/metar/flightstats_metarpresentconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/metar/flightstats_metarpresentconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     metar_present_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_present_conditions_df['id'] 
-    filename = "{0}/{1}/{2}/metar/flightstats_metarrunwaygroups_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/metar/flightstats_metarrunwaygroups_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     metar_runway_groups_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_runway_groups_df['id'] 
-    filename = "{0}/{1}/{2}/metar/flightstats_metarskyconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/metar/flightstats_metarskyconditions_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     metar_sky_conditions_df = pd.read_csv(filename, index_col=['metar_reports_id'], na_values=na_values)
     del metar_sky_conditions_df['id'] 
     metar_join = metar_present_conditions_df.join([metar_runway_groups_df, metar_sky_conditions_df])
@@ -128,17 +128,17 @@ def get_metar(prefix, data_prefix, data_rev_prefix, date_prefix):
     return tmp_df
 
 def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}/{1}/{2}/otherweather/flightstats_taf.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_taf.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_df = pd.read_csv(filename, index_col=['tafid'], parse_dates=[8,9,10,11], date_parser=parse_date_time, na_values=["MISSING"])
-    filename = "{0}/{1}/{2}/otherweather/flightstats_tafforecast.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_tafforecast.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_forceast_df = pd.read_csv(filename, index_col=['tafforecastid'], parse_dates=[4,5,7], date_parser=parse_date_time, na_values=["MISSING"])
-    filename = "{0}/{1}/{2}/otherweather/flightstats_taficing.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_taficing.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_icing_df = pd.read_csv(filename, na_values=["MISSING"])
-    filename = "{0}/{1}/{2}/otherweather/flightstats_tafsky.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_tafsky.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_sky_df = pd.read_csv(filename, na_values=["MISSING"])
-    filename = "{0}/{1}/{2}/otherweather/flightstats_taftemperature.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_taftemperature.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_temperature_df = pd.read_csv(filename, na_values=["MISSING"])
-    filename = "{0}/{1}/{2}/otherweather/flightstats_tafturbulence.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_tafturbulence.csv".format(data_prefix, data_rev_prefix, date_prefix)
     taf_turbulence_df = pd.read_csv(filename, na_values=["MISSING"])
     
     grouped = taf_icing_df.groupby('tafforecastid')
@@ -259,13 +259,13 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix):
     return taf_df
 
 def get_fbwind(prefix, data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindreport.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_fbwindreport.csv".format(data_prefix, data_rev_prefix, date_prefix)
     fbwindreport_df = pd.read_csv(filename, parse_dates=[1], date_parser=parse_date_time, na_values=na_values)
-    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindairport.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_fbwindairport.csv".format(data_prefix, data_rev_prefix, date_prefix)
     fbwindairport_df = pd.read_csv(filename, na_values=na_values)
-    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwind.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_fbwind.csv".format(data_prefix, data_rev_prefix, date_prefix)
     fbwind_df = pd.read_csv(filename, na_values=na_values)
-    filename = "{0}/{1}/{2}/otherweather/flightstats_fbwindaltitude.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/otherweather/flightstats_fbwindaltitude.csv".format(data_prefix, data_rev_prefix, date_prefix)
     fbwindaltitude_df = pd.read_csv(filename, na_values=na_values)
     grouped = fbwindaltitude_df.groupby('fbwindreportid')
     groups = []
@@ -357,7 +357,7 @@ def parse_estimated_runway_arrival(val):
 
 
 def get_flight_history_events(data_prefix, data_rev_prefix, date_prefix):
-    events_filename = "{0}/{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    events_filename = "{0}{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
     events_df = pd.read_csv(events_filename, na_values=na_values, parse_dates=[1], date_parser=parse_date_time)
     events_df["estimated_gate_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_gate_arrival(x)) 
     events_df["estimated_runway_arrival"] = events_df['data_updated'].apply(lambda x: parse_estimated_runway_arrival(x)) 
@@ -384,7 +384,7 @@ def get_flight_history_events(data_prefix, data_rev_prefix, date_prefix):
     return tmp_df
 
 def get_asdi_root(data_prefix, data_rev_prefix, date_prefix): 
-    asdi_root_filename = "{0}/{1}/{2}/ASDI/asdiflightplan.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_root_filename = "{0}{1}/{2}/ASDI/asdiflightplan.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_root_df = pd.read_csv(asdi_root_filename, na_values=na_values, index_col=['asdiflightplanid'], parse_dates=[1,7,8,9,10], date_parser=parse_date_time)
     asdi_root_df['estimateddepartureutc_diff'] = asdi_root_df['estimateddepartureutc'] - asdi_root_df['originaldepartureutc'] 
     asdi_root_df['estimateddepartureutc_diff'] =  asdi_root_df['estimateddepartureutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
@@ -393,32 +393,32 @@ def get_asdi_root(data_prefix, data_rev_prefix, date_prefix):
     return asdi_root_df
 
 def get_asdi_airway(data_prefix, data_rev_prefix, date_prefix):
-    asdi_airway_filename = "{0}/{1}/{2}/ASDI/asdiairway.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_airway_filename = "{0}{1}/{2}/ASDI/asdiairway.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_airway_df = pd.read_csv(asdi_airway_filename, index_col=['asdiflightplanid','ordinal'], na_values=na_values)
     return asdi_airway_df
 
 def get_asdi_fpcenter(data_prefix, data_rev_prefix, date_prefix):
-    asdi_asdifpcenter_filename = "{0}/{1}/{2}/ASDI/asdifpcenter.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_asdifpcenter_filename = "{0}{1}/{2}/ASDI/asdifpcenter.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_asdifpcenter_df = pd.read_csv(asdi_asdifpcenter_filename, index_col=['asdiflightplanid','ordinal'], na_values=na_values)
     return asdi_asdifpcenter_df
 
 def get_asdi_pfix(data_prefix, data_rev_prefix, date_prefix):
-    asdi_asdifpfix_filename = "{0}/{1}/{2}/ASDI/asdifpfix.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_asdifpfix_filename = "{0}{1}/{2}/ASDI/asdifpfix.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_asdifpfix_df = pd.read_csv(asdi_asdifpfix_filename, index_col=['asdiflightplanid','ordinal'], na_values=na_values)
     return asdi_asdifpfix_df
 
 def get_asdi_psector(data_prefix, data_rev_prefix, date_prefix):
-    asdi_asdifpsector_filename = "{0}/{1}/{2}/ASDI/asdifpsector.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_asdifpsector_filename = "{0}{1}/{2}/ASDI/asdifpsector.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_asdifpsector_df = pd.read_csv(asdi_asdifpsector_filename, index_col=['asdiflightplanid','ordinal'], na_values=na_values)
     return asdi_asdifpsector_df
 
 def get_asdi_waypoint(data_prefix, data_rev_prefix, date_prefix):
-    asdi_asdifpwaypoint_filename = "{0}/{1}/{2}/ASDI/asdifpwaypoint.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_asdifpwaypoint_filename = "{0}{1}/{2}/ASDI/asdifpwaypoint.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_asdifpwaypoint_df = pd.read_csv(asdi_asdifpwaypoint_filename, index_col=['asdiflightplanid','ordinal'], na_values=na_values)
     return asdi_asdifpwaypoint_df
 
 def get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix):
-    asdi_asdiposition_filename = "{0}/{1}/{2}/ASDI/asdiposition.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    asdi_asdiposition_filename = "{0}{1}/{2}/ASDI/asdiposition.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_asdiposition_df = pd.read_csv(asdi_asdiposition_filename, parse_dates=[0], date_parser=parse_date_time, na_values=na_values)
     grouped = asdi_asdiposition_df.groupby('flighthistoryid')
     groups = []
@@ -479,7 +479,7 @@ def get_asdi_merged(data_prefix, data_rev_prefix, date_prefix):
     return asdi_merged_df
 
 def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix):
-    atsccdeicing_filename = "{0}/{1}/{2}/atscc/flightstats_atsccdeicing.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    atsccdeicing_filename = "{0}{1}/{2}/atscc/flightstats_atsccdeicing.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccdeicing_df = pd.read_csv(atsccdeicing_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
     end_time = []
     for ix,row in atsccdeicing_df.iterrows():
@@ -491,7 +491,7 @@ def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix):
     return atsccdeicing_df
 
 def get_atscc_delay(data_prefix, data_rev_prefix, date_prefix):
-    atsccdelay_filename = "{0}/{1}/{2}/atscc/flightstats_atsccdelay.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    atsccdelay_filename = "{0}{1}/{2}/atscc/flightstats_atsccdelay.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccdelay_df = pd.read_csv(atsccdelay_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
     end_time = []
     for ix,row in atsccdelay_df.iterrows():
@@ -503,9 +503,9 @@ def get_atscc_delay(data_prefix, data_rev_prefix, date_prefix):
     return atsccdelay_df
 
 def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix):
-    atsccgrounddelay_filename = "{0}/{1}/{2}/atscc/flightstats_atsccgrounddelay.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    atsccgrounddelay_filename = "{0}{1}/{2}/atscc/flightstats_atsccgrounddelay.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccgrounddelay_df = pd.read_csv(atsccgrounddelay_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4,5,8,9,10,11], date_parser=parse_date_time)
-    atsccgrounddelayairports_filename = "{0}/{1}/{2}/atscc/flightstats_atsccgrounddelayairports.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    atsccgrounddelayairports_filename = "{0}{1}/{2}/atscc/flightstats_atsccgrounddelayairports.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccgrounddelayairports_df = pd.read_csv(atsccgrounddelayairports_filename, na_values=na_values)
     grouped = atsccgrounddelayairports_df.groupby('ground_delay_program_id')
     groups = []
@@ -526,7 +526,7 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix):
     atsccgrounddelayairports_tmp_df.set_index('ground_delay_program_id', inplace=True, verify_integrity=True)
     atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_df, atsccgrounddelayairports_tmp_df, how="left", left_index=True, right_index=True)
     print atsccgrounddelay_merged_df
-    atsccgrounddelayartccs_filename = "{0}/{1}/{2}/atscc/flightstats_atsccgrounddelayartccs.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    atsccgrounddelayartccs_filename = "{0}{1}/{2}/atscc/flightstats_atsccgrounddelayartccs.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccgrounddelayartccs_df = pd.read_csv(atsccgrounddelayartccs_filename, na_values=na_values)
     print atsccgrounddelayartccs_df
     grouped = atsccgrounddelayartccs_df.groupby('ground_delay_program_id')
@@ -984,7 +984,7 @@ def rebin_targets(targets, nbins):
 if __name__ == '__main__':
     store = pd.HDFStore('flight_quest.h5')
     store_filename = 'flight_quest.h5'
-    data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest'
+    data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
     date_prefix = '2012_11_12'

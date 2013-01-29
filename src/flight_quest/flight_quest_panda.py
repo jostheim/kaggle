@@ -980,13 +980,19 @@ if __name__ == '__main__':
         pool_queue = []
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
     elif kind == "concat":
         sample_size = None

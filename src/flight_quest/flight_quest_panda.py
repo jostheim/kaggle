@@ -683,15 +683,15 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
 
 
 def get_joined_data(data_prefix, data_rev_prefix, date_prefix, force=False):
-    print "joined_{0}".format(subdirname) in store, "force: {0}".format(force)
-    if "joined_{0}".format(subdirname) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
+    print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
+    if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
-            df = read_dataframe("joined_{0}".format(subdirname))
+            df = read_dataframe("joined_{0}".format(date_prefix))
             return df
         except Exception as e:
             print e
     else:
-        print "Working on {0}".format(subdirname)
+        print "Working on {0}".format(date_prefix)
         df = get_flight_history(data_prefix, data_rev_prefix, date_prefix)
         events = get_flight_history_events(data_prefix, data_rev_prefix, date_prefix)
         # forget ASDI positioning for now, don't think we have enough information to make positions useful
@@ -717,15 +717,15 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, force=False):
 #        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix)
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
-        write_dataframe("joined_{0}".format(subdirname), df)
-        df = read_dataframe("joined_{0}".format(subdirname))
+        write_dataframe("joined_{0}".format(date_prefix), df)
+#        df = read_dataframe("joined_{0}".format(date_prefix))
         print df
         return df
 
 def get_joined_data_proxy(args):
+    data_prefix = args[0]
     data_rev_prefix = args[1]
     date_prefix = args[2]
-    data_prefix = args[0]
     return get_joined_data(data_prefix, data_rev_prefix, date_prefix)
 
 def handle_datetime(x, initial):

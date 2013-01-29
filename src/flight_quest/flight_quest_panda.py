@@ -572,7 +572,7 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     arrival_ground_delays = []
     arrival_ground_delays_df = None
     departure_ground_delays = []
-    departure_ground_delays = None
+    departure_ground_delays_df = None
     arrival_delays = []
     departure_delays = []
     arrival_icing_delays = []

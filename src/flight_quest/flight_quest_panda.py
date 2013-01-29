@@ -673,17 +673,21 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     if len(arrival_ground_delays) > 0:
         arrival_ground_delays_df = pd.DataFrame(arrival_ground_delays)
         arrival_ground_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-    arrival_delays_df = pd.DataFrame(arrival_delays)
-    arrival_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-    arrival_icing_delays_df = pd.DataFrame(arrival_icing_delays)
-    arrival_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    if len(arrival_delays) > 0:
+        arrival_delays_df = pd.DataFrame(arrival_delays)
+        arrival_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    if len(arrival_icing_delays):
+        arrival_icing_delays_df = pd.DataFrame(arrival_icing_delays)
+        arrival_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
     if len(departure_ground_delays) > 0:
         departure_ground_delays_df = pd.DataFrame(departure_ground_delays)
         departure_ground_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-    departure_delays_df = pd.DataFrame(departure_delays)
-    departure_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-    departure_icing_delays_df = pd.DataFrame(departure_icing_delays)
-    departure_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    if len(departure_delays) > 0:
+        departure_delays_df = pd.DataFrame(departure_delays)
+        departure_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    if len(departure_icing_delays) > 0:
+        departure_icing_delays_df = pd.DataFrame(departure_icing_delays)
+        departure_icing_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
@@ -926,12 +930,13 @@ def random_forest_classify(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(store, sample_size=None):
+def concat(sample_size=None):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
         date_prefix = subdirname
-        df = get_joined_data(subdirname, data_prefix, data_rev_prefix, store)
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        df = get_joined_data(subdirname, data_prefix, data_rev_prefix, store_filename)
         test_df = get_test_flight_history()
         if test_df is not None:
             # takes a diff of the indices
@@ -975,7 +980,7 @@ def rebin_targets(targets, nbins):
 if __name__ == '__main__':
     store = pd.HDFStore('flight_quest.h5')
     store_filename = 'flight_quest.h5'
-    data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
+    data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
     date_prefix = '2012_11_12'
@@ -989,7 +994,7 @@ if __name__ == '__main__':
             pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":
@@ -1003,7 +1008,7 @@ if __name__ == '__main__':
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_dfs = concat(store, sample_size=sample_size)
+        all_dfs = concat(sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}

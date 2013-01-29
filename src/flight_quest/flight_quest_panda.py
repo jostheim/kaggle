@@ -689,6 +689,7 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
 
 def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False):
     store = pd.HDFStore(store_filename)
+    df = None
     print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
     if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
@@ -727,7 +728,8 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
         write_dataframe("joined_{0}".format(date_prefix), df, store)
 #        df = read_dataframe("joined_{0}".format(date_prefix))
         print df
-        return df
+    store.close()
+    return df
 
 def get_joined_data_proxy(args):
     data_prefix = args[0]

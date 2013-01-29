@@ -732,9 +732,10 @@ def get_joined_data_proxy(args):
     data_prefix = args[0]
     data_rev_prefix = args[1]
     date_prefix = args[2]
+    store = args[3]
     ret = None
     try:
-        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix)
+        ret = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store)
     except Exception as e:
         print e
         print traceback.format_exc()

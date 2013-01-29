@@ -21,7 +21,6 @@ import traceback
 
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
-store = pd.HDFStore('flight_quest.h5')
 
 def myround(x, base=5):
     return int(base * round(float(x)/base))
@@ -47,7 +46,7 @@ def convert_dates(val):
     except Exception as e:
         return val
 
-def write_dataframe(name, df):
+def write_dataframe(name, df, store):
 #    types = []
 #    for column in df.columns:
 #        types.append(get_column_type(df[column]))
@@ -55,7 +54,7 @@ def write_dataframe(name, df):
 #    df.to_csv("{0}.csv".format(name))
     store[name] = df
 
-def read_dataframe(name, convert_dates_switch = True):
+def read_dataframe(name, store, convert_dates_switch = True):
 #    types = pickle.load(open("{0}.header".format(name), 'rb'))
 #    dates = []
 #    for i, typee in enumerate(types):
@@ -688,11 +687,11 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def get_joined_data(data_prefix, data_rev_prefix, date_prefix, force=False):
+def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store, force=False):
     print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
     if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
         try:
-            df = read_dataframe("joined_{0}".format(date_prefix))
+            df = read_dataframe("joined_{0}".format(date_prefix), store)
             return df
         except Exception as e:
             print e
@@ -724,7 +723,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, force=False):
 #        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix)
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
-        write_dataframe("joined_{0}".format(date_prefix), df)
+        write_dataframe("joined_{0}".format(date_prefix), df, store)
 #        df = read_dataframe("joined_{0}".format(date_prefix))
         print df
         return df
@@ -920,12 +919,12 @@ def random_forest_classify(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(sample_size=None):
+def concat(store, sample_size=None):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
         date_prefix = subdirname
-        df = get_joined_data(subdirname, data_prefix, data_rev_prefix)
+        df = get_joined_data(subdirname, data_prefix, data_rev_prefix, store)
         test_df = get_test_flight_history()
         if test_df is not None:
             # takes a diff of the indices
@@ -967,6 +966,7 @@ def rebin_targets(targets, nbins):
     return new_bins
 
 if __name__ == '__main__':
+    store = pd.HDFStore('flight_quest.h5')
     data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
@@ -977,37 +977,37 @@ if __name__ == '__main__':
         pool_queue = []
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname])
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            get_joined_data(data_prefix, data_rev_prefix, subdirname)
+            get_joined_data(data_prefix, data_rev_prefix, subdirname, store)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname)
+            get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store)
     elif kind == "concat":
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_dfs = concat(sample_size=sample_size)
-        write_dataframe("all_joined", all_dfs)
+        all_dfs = concat(store, sample_size=sample_size)
+        write_dataframe("all_joined", all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = read_dataframe("all_joined")
+        all_df = read_dataframe("all_joined", store)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         process_into_features(all_df, unique_cols)
-        write_dataframe("features", all_df)
+        write_dataframe("features", all_df, store)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
-            df = get_joined_data(subdirname, True)
+            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store)
             unique_cols = {}
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "learn":
         if "features" in store:
             print "reading features from store"
-            all_df = read_dataframe("features")
+            all_df = read_dataframe("features", store)
             for i, (column, series) in enumerate(all_df.iteritems()):
                 if series.dtype is object or str(series.dtype) == "object":
                     print "AFter convert types {0} is still an object".format(column)
@@ -1019,11 +1019,11 @@ if __name__ == '__main__':
             sample_size = None
             if len(sys.argv) > 2:
                 sample_size = int(sys.argv[2])
-            all_df = concat(sample_size=sample_size)
+            all_df = concat(store, sample_size=sample_size)
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
             print "writing features to features.csv"
-            write_dataframe("features", all_df)
+            write_dataframe("features", all_df, store)
         targets = all_df['gate_arrival_diff'].dropna()
         # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=1))

@@ -522,9 +522,12 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix):
     atsccgrounddelayairports_tmp_df = pd.DataFrame(groups)
     atsccgrounddelayairports_tmp_df.set_index('ground_delay_program_id', inplace=True, verify_integrity=True)
     atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_df, atsccgrounddelayairports_tmp_df, how="left", left_index=True, right_index=True)
+    print atsccgrounddelay_merged_df
     atsccgrounddelayartccs_filename = "{0}/{1}/{2}/atscc/flightstats_atsccgrounddelayartccs.csv".format(data_prefix, data_rev_prefix, date_prefix)
     atsccgrounddelayartccs_df = pd.read_csv(atsccgrounddelayartccs_filename, na_values=na_values)
+    print atsccgrounddelayartccs_df
     grouped = atsccgrounddelayartccs_df.groupby('ground_delay_program_id')
+    print grouped
     groups = []
     i = 0
     for name, group in grouped:
@@ -538,6 +541,7 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix):
                     d["{0}_{1}".format(k, group.columns[j])] = val
         groups.append(d)
         i += 1
+    print groups
     atsccgrounddelayartccs_tmp_df = pd.DataFrame(groups)
     atsccgrounddelayartccs_tmp_df.set_index('ground_delay_program_id', inplace=True, verify_integrity=True)
     #atsccgrounddelay_merged_df = pd.merge(atsccgrounddelay_merged_df, atsccgrounddelayartccs_tmp_df, how="left", left_index=True, right_index=True)

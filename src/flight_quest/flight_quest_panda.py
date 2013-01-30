@@ -83,7 +83,7 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix):
     return df
 
 def get_test_flight_history(data_prefix, data_rev_prefix, date_prefix):
-    filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_test_rev_prefix, date_prefix)
+    filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
     df = None
     if os.path.isfile(filename):
         df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
@@ -951,7 +951,7 @@ def concat(sample_size=None):
             continue
         test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
         if test_df is not None:
-            print "df before removal of test {0}".format(df)
+            print "df before removal of test", df
             # takes a diff of the indices
             print "test indices: {0}".format(test_df.index)
             test_indices = df.index - test_df.index

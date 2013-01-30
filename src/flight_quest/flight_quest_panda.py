@@ -714,16 +714,19 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
         asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix) 
         joiners = [events, asdi_disposition, asdi_merged]
         df = df.join(joiners)
+        print "joined events and asdi"
         per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix)
         for per_flight in per_flights:
             if per_flight is not None:
                 df = df.join(per_flight)
+        print "joined atscc"
 #        joiners = per_flights
 #        df = df.join(joiners)
         metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix)
         metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix)
         df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
         df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+        print "joined metar"
 #        fbwind_arrival = get_fbwind("arrival", data_prefix, data_rev_prefix, date_prefix)
 #        fbwind_departure = get_fbwind("departure", data_prefix, data_rev_prefix, date_prefix)
 #        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)

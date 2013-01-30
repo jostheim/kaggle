@@ -949,10 +949,13 @@ def concat(sample_size=None):
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
         test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
         if test_df is not None:
+            print "df before removal of test {0}".format(df)
             # takes a diff of the indices
+            print "test indices: {0}".format(test_df.index)
             test_indices = df.index - test_df.index
+            print "test_indices diff: {0}".format(test_indices)
             df = df.ix[test_indices]
-        print "df.index",df.index
+            print "df after removal of test {0}".format(df)
         df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
         df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         # we have to have gate_arrival_diff b/c it is the target so reduce set to

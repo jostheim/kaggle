@@ -739,10 +739,18 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
 #        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix)
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
-        write_dataframe("joined_{0}".format(date_prefix), df, store)
+        try:
+            write_dataframe("joined_{0}".format(date_prefix), df, store)
+        except Exception as e:
+            print e
+            print traceback.format_exc()
 #        df = read_dataframe("joined_{0}".format(date_prefix))
         print df
-    store.close()
+    try:
+        store.close()
+    except Exception as e:
+        print e
+        print traceback.format_exc()
     return df
 
 def get_joined_data_proxy(args):

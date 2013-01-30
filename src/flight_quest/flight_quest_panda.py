@@ -696,7 +696,10 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
 
 
 def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False):
-    store = pd.HDFStore(store_filename)
+    try:
+        store = pd.HDFStore(store_filename)
+    except Exception as e:
+        return None
     df = None
     print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
     if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
@@ -943,7 +946,7 @@ def concat(sample_size=None):
         print "Working on {0}".format(subdirname)
         date_prefix = subdirname
         store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-        df = get_joined_data(subdirname, data_prefix, data_rev_prefix, store_filename)
+        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
         test_df = get_test_flight_history()
         if test_df is not None:
             # takes a diff of the indices

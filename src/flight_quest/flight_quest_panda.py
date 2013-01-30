@@ -946,7 +946,10 @@ def concat(sample_size=None):
         print "Working on {0}".format(subdirname)
         date_prefix = subdirname
         store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+        try:
+            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+        except Exception as e:
+            continue
         if df is None:
             continue
         test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
@@ -963,7 +966,6 @@ def concat(sample_size=None):
         # we have to have gate_arrival_diff b/c it is the target so reduce set to
         # non-nan values
         df_tmp = df.ix[df['gate_arrival_diff'].dropna().index]
-        print "df_tmp.index",df_tmp.index
         samples = len(df_tmp.index) / 2
         if samples is not None:
             samples = sample_size

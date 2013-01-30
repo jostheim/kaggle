@@ -947,7 +947,7 @@ def concat(sample_size=None):
         date_prefix = subdirname
         store_filename = 'flight_quest_{0}.h5'.format(subdirname)
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
-        test_df = get_test_flight_history()
+        test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
         if test_df is not None:
             # takes a diff of the indices
             test_indices = df.index - test_df.index

@@ -947,6 +947,8 @@ def concat(sample_size=None):
         date_prefix = subdirname
         store_filename = 'flight_quest_{0}.h5'.format(subdirname)
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+        if df is None:
+            continue
         test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
         if test_df is not None:
             print "df before removal of test {0}".format(df)

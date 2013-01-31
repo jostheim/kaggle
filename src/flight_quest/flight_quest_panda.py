@@ -21,6 +21,9 @@ import traceback
 
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
+actual_class = "actual_gate_arrival"
+scheduled_class = "scheduled_gate_arrival"
+learned_class_name = "gate_arrival_diff"
 
 def myround(x, base=5):
     return int(base * round(float(x)/base))
@@ -47,27 +50,9 @@ def convert_dates(val):
         return val
 
 def write_dataframe(name, df, store):
-#    types = []
-#    for column in df.columns:
-#        types.append(get_column_type(df[column]))
-#    pickle.dump(types, open("{0}.header".format(name), 'wb'))
-#    df.to_csv("{0}.csv".format(name))
     store[name] = df
 
 def read_dataframe(name, store, convert_dates_switch = True):
-#    types = pickle.load(open("{0}.header".format(name), 'rb'))
-#    dates = []
-#    for i, typee in enumerate(types):
-#        if typee is datetime.datetime:
-#            dates.append(i+1)
-#    df = pd.read_csv("{0}.csv".format(name), index_col=0)
-#    if convert_dates_switch:
-#        print "converting dates"
-#        for column, series  in df.iteritems():
-#            if column not in do_not_convert_to_date:
-#                df[column] = series.apply(lambda x: convert_dates(x) if type(x) is str else x) 
-#    print "dropping duplicates"
-#    df.drop_duplicates(take_last=True, inplace=True)
     return store[name]
 
 def get_column_type(series):
@@ -84,6 +69,13 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix):
 
 def get_test_flight_history(data_prefix, data_rev_prefix, date_prefix):
     filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
+    df = None
+    if os.path.isfile(filename):
+        df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
+    return df
+
+def get_test_flights_combined(data_prefix, data_rev_prefix, date_prefix):
+    filename = "{0}{1}/test_flights_combined.csv".format(data_prefix, data_rev_prefix, date_prefix)
     df = None
     if os.path.isfile(filename):
         df = pd.read_csv(filename, index_col=0, parse_dates=[7,8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
@@ -695,16 +687,16 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix):
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False):
+def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False, prefix=""):
     try:
-        store = pd.HDFStore(store_filename)
+        store = pd.HDFStore(prefix+store_filename)
     except Exception as e:
         return None
     df = None
-    print "joined_{0}".format(date_prefix) in store, "force: {0}".format(force)
-    if "joined_{0}".format(date_prefix) in store and not force: #os.path.isfile("{0}_joined.csv".format(subdirname)) and not force:
+    print "{0}joined_{1}".format(prefix, date_prefix) in store, "force: {0}".format(force)
+    if "{0}joined_{1}".format(prefix, date_prefix) in store and not force: 
         try:
-            df = read_dataframe("joined_{0}".format(date_prefix), store)
+            df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
             return df
         except Exception as e:
             print e
@@ -740,7 +732,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
         print "column type counts: {0}".format(df.get_dtype_counts())
         try:
-            write_dataframe("joined_{0}".format(date_prefix), df, store)
+            write_dataframe("{0}joined_{1}".format(prefix, date_prefix), df, store)
         except Exception as e:
             print e
             print traceback.format_exc()
@@ -759,9 +751,12 @@ def get_joined_data_proxy(args):
     data_rev_prefix = args[1]
     date_prefix = args[2]
     store_filename = args[3]
+    prefix = ""
+    if len(args) > 4:
+        prefix = args[4]
     ret = False
     try:
-        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename)
+        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix)
         if df is not None:
             ret = True
     except Exception as e:
@@ -842,7 +837,8 @@ def process_into_features(df, unique_cols):
 #                        if column not in bag_o_words_columns_to_delete:
 #                            bag_o_words_columns_to_delete.append(column)
 #                else:
-                df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
+                if column in unique_cols:
+                    df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
             elif series.dtype is object or str(series.dtype) == "object":
                 print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
                 #del df[column]
@@ -863,11 +859,10 @@ def process_into_features(df, unique_cols):
         del df["scheduled_gate_arrival"]
     if "scheduled_runway_arrival" in df.columns:
         del df["scheduled_runway_arrival"]
-#    df = df.convert_objects()
+    df = df.convert_objects()
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
-            print "AFter convert types {0} is still an object".format(column)
-            print series
+            print "After convert types {0} is still an object, is nans {1}".format(column, len(series.dropna()) == 0)
             del df[column]
             #df[column] = df[column].astype(float)
     return df
@@ -892,15 +887,14 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
 
-def get_unique_classes(targets, traincv):
-    sorted_targets = sorted(targets[traincv])
-    unique_classes = []
-    for sorted_target in sorted_targets:
-        if sorted_target not in unique_classes:
-            unique_classes.append(sorted_target)
-    unique_classes = np.array(unique_classes)
-    return unique_classes
-
+def get_expectations(cfr, features):
+    p = cfr.predict_proba(features)
+    unique_classes = sorted(cfr.classes_)
+    expectations = []
+    for k, probs in enumerate(p):
+        expectation = np.sum(unique_classes*probs[k])
+        expectations.append(expectation)
+    return expectations
 
 def get_metric(cfr, features, testcv, unique_classes):
     sum_diff = 0.0
@@ -912,7 +906,19 @@ def get_metric(cfr, features, testcv, unique_classes):
     mean_diff = sum_diff/float(len(targets))
     return mean_diff
 
-def random_forest_classify(targets, features):
+def random_forest_learn(targets, features):
+    cfr = RandomForestClassifier(
+        n_estimators=100,
+        max_features=None,
+        verbose=0,
+        compute_importances=True,
+        n_jobs=8,
+        random_state=0,
+        )
+    cfr.fit(features, targets)
+    return cfr
+
+def random_forest_cross_validate(targets, features):
     cv = cross_validation.KFold(len(features), k=5, indices=False)
     #iterate through the training and test cross validation segments and
     #run the classifier on each one, aggregating the results into a list
@@ -940,7 +946,7 @@ def random_forest_classify(targets, features):
 #        features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
 #        for j, tup in enumerate(features_list):
 #            print j, tup
-        unique_classes = get_unique_classes(targets, traincv)
+        unique_classes = sorted(cfr.classes_)
         mean_diff = get_metric(cfr, features, testcv, unique_classes)
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)
@@ -948,7 +954,7 @@ def random_forest_classify(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(sample_size=None):
+def concat(data_prefix, data_rev_prefix, sample_size=None):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
@@ -969,11 +975,12 @@ def concat(sample_size=None):
             print "test_indices diff: {0}".format(test_indices)
             df = df.ix[test_indices]
             print "df after removal of test {0}".format(df)
-        df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
-        df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-        # we have to have gate_arrival_diff b/c it is the target so reduce set to
+        # we'll need to change this for runway arrival
+        df[learned_class_name] = df[actual_class] - df[scheduled_class]
+        df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+        # we have to have learned_class_name b/c it is the target so reduce set to
         # non-nan values
-        df_tmp = df.ix[df['gate_arrival_diff'].dropna().index]
+        df_tmp = df.ix[df[learned_class_name].dropna().index]
         samples = len(df_tmp.index) / 2
         if samples is not None:
             samples = sample_size
@@ -1008,8 +1015,7 @@ if __name__ == '__main__':
     data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
-    date_prefix = '2012_11_12'
-    data_test_rev_prefix = 'SampleTestSet'
+    test_data_rev_prefix = 'PublicLeaderboardSet'
     kind = sys.argv[1]
     if kind == "build_multi":
         pool_queue = []
@@ -1029,18 +1035,39 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
+    elif kind == "build_predict":
+        pool_queue = []
+        pool = Pool(processes=4)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "predict_"])
+        results = pool.map(get_joined_data_proxy, pool_queue, 1)
+        pool.terminate()
     elif kind == "concat":
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_dfs = concat(sample_size=sample_size)
+        all_dfs = concat(data_prefix, data_rev_prefix, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
+    elif kind == "concat_predict":
+        all_dfs = concat(data_prefix, test_data_rev_prefix)
+        write_dataframe("predict_all_joined", all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
         all_df = read_dataframe("all_joined", store)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        process_into_features(all_df, unique_cols)
+        all_df = process_into_features(all_df, unique_cols)
+        all_df.to_csv("features.csv")
+        store = pd.HDFStore('features.h5')
         write_dataframe("features", all_df, store)
+    elif kind == "generate_features_predict":
+        unique_cols = {}
+        all_df = read_dataframe("predict_all_joined", store)
+        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+        all_df = process_into_features(all_df, unique_cols)
+        all_df.to_csv("predict_features.csv")
+        store = pd.HDFStore('predict_features.h5')
+        write_dataframe("predict_features", all_df, store)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
@@ -1048,35 +1075,55 @@ if __name__ == '__main__':
             unique_cols = {}
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
             pickle.dump(unique_cols, open("unique_columns.p", "wb"))
-    elif kind == "learn":
-        if "features" in store:
-            print "reading features from store"
-            all_df = read_dataframe("features", store)
-            for i, (column, series) in enumerate(all_df.iteritems()):
-                if series.dtype is object or str(series.dtype) == "object":
-                    print "AFter convert types {0} is still an object".format(column)
-                    if len(series.dropna()) > 0:
-                        print "is all nan and not 0:  {0}".format(len(series.dropna()))
-                    del all_df[column]
-        else:
-            unique_cols = {}
-            sample_size = None
-            if len(sys.argv) > 2:
-                sample_size = int(sys.argv[2])
-            all_df = concat(store, sample_size=sample_size)
-            unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-            all_df = process_into_features(all_df, unique_cols)
-            print "writing features to features.csv"
-            write_dataframe("features", all_df, store)
-        targets = all_df['gate_arrival_diff'].dropna()
+    elif kind == "cross_validate":
+        print "reading features from store"
+        all_df = read_dataframe("features", store)
+        for i, (column, series) in enumerate(all_df.iteritems()):
+            if series.dtype is object or str(series.dtype) == "object":
+                print "AFter convert types {0} is still an object".format(column)
+                if len(series.dropna()) > 0:
+                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
+                del all_df[column]
+        targets = all_df[learned_class_name].dropna()
         # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=1))
         print targets
-        features = all_df.ix[all_df['gate_arrival_diff'].dropna().index]
+        features = all_df.ix[all_df[learned_class_name].dropna().index]
         # remove the target from the features
-        del features['gate_arrival_diff']
+        del features[learned_class_name]
         print features
-        random_forest_classify(targets, features)
+        random_forest_cross_validate(targets, features)
+    elif kind == "learn":
+        print "reading features from store"
+        all_df = read_dataframe("features", store)
+        for i, (column, series) in enumerate(all_df.iteritems()):
+            if series.dtype is object or str(series.dtype) == "object":
+                print "AFter convert types {0} is still an object".format(column)
+                if len(series.dropna()) > 0:
+                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
+                del all_df[column]
+        targets = all_df[learned_class_name].dropna()
+        # may want to rebin here, rounding to 5 minutes
+        targets = targets.apply(lambda x: myround(x, base=1))
+        print targets
+        features = all_df.ix[all_df[learned_class_name].dropna().index]
+        # remove the target from the features
+        del features[learned_class_name]
+        print features
+        cfr = random_forest_learn(targets, features)
+        pickle.dump(cfr, open("cfr_model.p", 'wb'))
+    elif kind == "predict":
+        print "reading features from store"
+        cfr = pickle.load(open("cfr_model.p", 'rb'))
+        test_all_df = read_dataframe("predict_features", store)
+        all_df = read_dataframe("features", store)
+        # This should normalize the features used for learning columns with the features used for predicting
+        for column in all_df.columns:
+            if column not in test_all_df.columns:
+                test_all_df[column] = pd.Series([], index=all_df.index)
+        # if we happen to have gate_arrival diff (which is what we are trying to predict) then remove it
+        del features[learned_class_name]
+        expectations = get_expectations(cfr, features)
         
 
 

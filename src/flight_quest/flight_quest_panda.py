@@ -782,8 +782,13 @@ def process_into_features(df, unique_cols):
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     bag_o_words = {}
     bag_o_words_columns_to_delete = []
-    for column, series in df.iteritems():
+    for i, (column, series) in enumerate(df.iteritems()):
         try:
+            series = series.dropna()
+            if len(series) == 0:
+                print "Column {0} is entirely nan's".format(column)
+                continue
+            print "Working on column {0}/{1}".format(i, len(df.columns))
             # no data, no need to keep it
             #create diff columns for estimates
             if "estimated_gate_arrival" in column:
@@ -840,7 +845,7 @@ def process_into_features(df, unique_cols):
                 if column in unique_cols:
                     df[column] = df[column].apply(lambda x: unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
             elif series.dtype is object or str(series.dtype) == "object":
-                print "Column {0} is not a datetime and not a string, but is an object according to pandas: all nans: {1}".format(column, len(series.dropna()) == 0)
+                print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column)
                 #del df[column]
         except Exception as e:
             print e

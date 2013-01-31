@@ -1085,7 +1085,7 @@ if __name__ == '__main__':
         try:
             all_df = read_dataframe("features", store)
         except Exception as e:
-            all_df = pd.read_csv("features.csv")
+            all_df = pd.read_csv("features.csv", index_col=0)
         for i, (column, series) in enumerate(all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)

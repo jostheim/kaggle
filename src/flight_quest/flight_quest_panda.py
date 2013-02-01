@@ -939,7 +939,7 @@ def random_forest_learn(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=2,
+        n_jobs=6,
         random_state=0,
         )
     cfr.fit(features, targets)

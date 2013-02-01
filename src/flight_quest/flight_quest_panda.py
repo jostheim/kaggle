@@ -61,31 +61,37 @@ def generate_cutoff_times(first_day, num_days, interval_beginning_hours_after_mi
     return cutoff_times
 
 def write_dataframe(name, df, store):
-    ''' Write a set of keys to our store representing N columns each of a larger table '''
-    keys = {}
-    buffered = []
-    for i, col in enumerate(df.columns):
-        buffered.append(col)
-        if len(buffered) == 500:
-            keys["{0}_{1}".format(name, i)] = buffered
-            buffered = []
-    if len(buffered) > 0:
-        keys["{0}_{1}".format(name, i)] = buffered
-    store.append_to_multiple(keys, df, keys.keys()[0])
-    
+    store[name] = df
 
-def read_dataframe(name, store):
-    ''' Read a set of keys from our store representing N columns each of a larger table
-     and then join the pieces back into the full table. '''
-    keys = []
-    i = 0
-    while True:
-        if "{0}_{1}".format(name, i) in store.keys():
-            keys.append("{0}_{1}".format(name, i))
-        else:
-            break
-        i += 1
-    return store.select_as_multiple(keys)
+def read_dataframe(name, store, convert_dates_switch = True):
+    return store[name]
+
+#def write_dataframe(name, df, store):
+#    ''' Write a set of keys to our store representing N columns each of a larger table '''
+#    keys = {}
+#    buffered = []
+#    for i, col in enumerate(df.columns):
+#        buffered.append(col)
+#        if len(buffered) == 500:
+#            keys["{0}_{1}".format(name, i)] = buffered
+#            buffered = []
+#    if len(buffered) > 0:
+#        keys["{0}_{1}".format(name, i)] = buffered
+#    store.append_to_multiple(keys, df, keys.keys()[0])
+#    
+#
+#def read_dataframe(name, store):
+#    ''' Read a set of keys from our store representing N columns each of a larger table
+#     and then join the pieces back into the full table. '''
+#    keys = []
+#    i = 0
+#    while True:
+#        if "{0}_{1}".format(name, i) in store.keys():
+#            keys.append("{0}_{1}".format(name, i))
+#        else:
+#            break
+#        i += 1
+#    return store.select_as_multiple(keys)
 
 def get_column_type(series):
     dtype_tmp = None

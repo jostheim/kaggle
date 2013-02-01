@@ -625,7 +625,7 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_tim
 def merge(left, right):
     return pd.merge(left, right, how="left", left_on=['flight_history_id'], right_on=['flighthistoryid'])
 
-def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time = cutoff_time):
+def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time = None):
     atsccgrounddelay_merged_df = get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
     atsccdelay_df = get_atscc_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
     atsccdeicing_df = get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)

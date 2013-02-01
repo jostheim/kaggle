@@ -24,8 +24,8 @@ do_not_convert_to_date = ["icao_aircraft_type_actual"]
 actual_class = "actual_gate_arrival"
 scheduled_class = "scheduled_gate_arrival"
 learned_class_name = "gate_arrival_diff"
-features_to_remove = ["actual_gate_arrival", "gate_arrival_diff", "actual_runway_arrival", "runway_arrival_diff", 'actual_gate_arrival_weekday', 'actual_gate_arrival_day', 'actual_gate_arrival_hour', 'actual_gate_arrival_minute', 'actual_runway_arrival_weekday', 'actual_runway_arrival_day', 'actual_runway_arrival_hour', 'actual_runway_arrival_minute']
-
+features_to_remove = ["actual_gate_arrival", "gate_arrival_diff", 'actual_gate_arrival_weekday', 'actual_gate_arrival_day', 'actual_gate_arrival_hour', 'actual_gate_arrival_minute']
+#features_to_remove = ["actual_runway_arrival", "runway_arrival_diff", 'actual_runway_arrival_weekday', 'actual_runway_arrival_day', 'actual_runway_arrival_hour', 'actual_runway_arrival_minute']
 def myround(x, base=5):
     return int(base * round(float(x)/base))
 
@@ -939,7 +939,7 @@ def random_forest_learn(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=8,
+        n_jobs=2,
         random_state=0,
         )
     cfr.fit(features, targets)

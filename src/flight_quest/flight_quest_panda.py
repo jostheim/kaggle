@@ -66,7 +66,7 @@ def write_dataframe(name, df, store):
     buffered = []
     for i, col in enumerate(df.columns):
         buffered.append(col)
-        if len(buffered == 500):
+        if len(buffered) == 500:
             keys["{0}_{1}".format(name, i)] = buffered
             buffered = []
     if len(buffered) > 0:

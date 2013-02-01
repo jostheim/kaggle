@@ -24,6 +24,7 @@ do_not_convert_to_date = ["icao_aircraft_type_actual"]
 actual_class = "actual_gate_arrival"
 scheduled_class = "scheduled_gate_arrival"
 learned_class_name = "gate_arrival_diff"
+features_to_remove = ["actual_gate_arrival", "gate_arrival_diff", "actual_runway_arrival", "runway_arrival_diff", 'actual_gate_arrival_weekday', 'actual_gate_arrival_day', 'actual_gate_arrival_hour', 'actual_gate_arrival_minute', 'actual_runway_arrival_weekday', 'actual_runway_arrival_day', 'actual_runway_arrival_hour', 'actual_runway_arrival_minute']
 
 def myround(x, base=5):
     return int(base * round(float(x)/base))
@@ -50,10 +51,31 @@ def convert_dates(val):
         return val
 
 def write_dataframe(name, df, store):
-    store[name] = df
+    ''' Write a set of keys to our store representing N columns each of a larger table '''
+    keys = {}
+    buffered = []
+    for i, col in enumerate(df.columns):
+        buffered.append(col)
+        if len(buffered == 500):
+            keys["{0}_{1}".format(name, i)] = buffered
+            buffered = []
+    if len(buffered) > 0:
+        keys["{0}_{1}".format(name, i)] = buffered
+    store.append_to_multiple(keys, df, keys.keys()[0])
+    
 
-def read_dataframe(name, store, convert_dates_switch = True):
-    return store[name]
+def read_dataframe(name, store):
+    ''' Read a set of keys from our store representing N columns each of a larger table
+     and then join the pieces back into the full table. '''
+    keys = []
+    i = 0
+    while True:
+        if "{0}_{1}".format(name, i) in store.keys():
+            keys.append("{0}_{1}".format(name, i))
+        else:
+            break
+        i += 1
+    return store.select_as_multiple(keys)
 
 def get_column_type(series):
     dtype_tmp = None
@@ -915,7 +937,7 @@ def random_forest_learn(targets, features):
     cfr = RandomForestClassifier(
         n_estimators=100,
         max_features=None,
-        verbose=0,
+        verbose=2,
         compute_importances=True,
         n_jobs=8,
         random_state=0,
@@ -932,7 +954,7 @@ def random_forest_cross_validate(targets, features):
         cfr = RandomForestClassifier(
         n_estimators=100,
         max_features=None,
-        verbose=0,
+        verbose=2,
         compute_importances=True,
         n_jobs=8,
         random_state=0,
@@ -1129,8 +1151,10 @@ if __name__ == '__main__':
         for column in all_df.columns:
             if column not in test_all_df.columns:
                 test_all_df[column] = pd.Series([], index=all_df.index)
-        # if we happen to have gate_arrival diff (which is what we are trying to predict) then remove it
-        del features[learned_class_name]
+        # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
+        # but the one I am targeting
+        for col in features_to_remove:
+            del features[col]
         expectations = get_expectations(cfr, features)
         
 

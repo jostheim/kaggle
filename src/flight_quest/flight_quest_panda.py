@@ -1154,45 +1154,41 @@ def random_forest_cross_validate(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(data_prefix, data_rev_prefix, sample_size=None):
-    all_dfs = None
-    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-        print "Working on {0}".format(subdirname)
-        date_prefix = subdirname
-        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-        try:
-            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
-        except Exception as e:
-            continue
-        if df is None:
-            continue
-        test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
-        if test_df is not None:
-            print "df before removal of test", df
-            # takes a diff of the indices
-            print "test indices: {0}".format(test_df.index)
-            test_indices = df.index - test_df.index
-            print "test_indices diff: {0}".format(test_indices)
-            df = df.ix[test_indices]
-            print "df after removal of test {0}".format(df)
-        # we'll need to change this for runway arrival
-        df[learned_class_name] = df[actual_class] - df[scheduled_class]
-        df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-        # we have to have learned_class_name b/c it is the target so reduce set to
-        # non-nan values
-        df_tmp = df.ix[df[learned_class_name].dropna().index]
-        samples = len(df_tmp.index) / 2
-        if samples is not None:
-            samples = sample_size
-        rows = random.sample(df_tmp.index, samples)
-        df_tmp = df_tmp.ix[rows]
-        if all_dfs is None:
-            all_dfs = df_tmp
-            print "all_dfs after",all_dfs.index
-        else:
-            all_dfs = all_dfs.append(df_tmp)
-            all_dfs.drop_duplicates(take_last=True, inplace=True)
-    print all_dfs
+def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None):
+    print "Working on {0}".format(subdirname)
+    store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+    try:
+        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+    except Exception as e:
+        continue
+    if df is None:
+        continue
+    test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
+    if test_df is not None:
+        print "df before removal of test", df
+        # takes a diff of the indices
+        print "test indices: {0}".format(test_df.index)
+        test_indices = df.index - test_df.index
+        print "test_indices diff: {0}".format(test_indices)
+        df = df.ix[test_indices]
+        print "df after removal of test {0}".format(df)
+    # we'll need to change this for runway arrival
+    df[learned_class_name] = df[actual_class] - df[scheduled_class]
+    df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+    # we have to have learned_class_name b/c it is the target so reduce set to
+    # non-nan values
+    df_tmp = df.ix[df[learned_class_name].dropna().index]
+    samples = len(df_tmp.index) / 2
+    if samples is not None:
+        samples = sample_size
+    rows = random.sample(df_tmp.index, samples)
+    df_tmp = df_tmp.ix[rows]
+    if all_dfs is None:
+        all_dfs = df_tmp
+        print "all_dfs after",all_dfs.index
+    else:
+        all_dfs = all_dfs.append(df_tmp)
+        all_dfs.drop_duplicates(take_last=True, inplace=True)
     return all_dfs
 
 def rebin_targets(targets, nbins):
@@ -1247,7 +1243,14 @@ if __name__ == '__main__':
         pool_queue = []
         pool = Pool(processes=4)
         for i in xrange(5):
-            for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+            for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+                subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
+                cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
+                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+                pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
+            results = pool.map(get_joined_data_proxy, pool_queue, 1)
+        for i in xrange(5):
+            for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
                 cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
@@ -1258,7 +1261,11 @@ if __name__ == '__main__':
         sample_size = None
         if len(sys.argv) > 2:
             sample_size = int(sys.argv[2])
-        all_dfs = concat(data_prefix, data_rev_prefix, sample_size=sample_size)
+        all_dfs = None
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = concat(data_prefix, test_data_rev_prefix)

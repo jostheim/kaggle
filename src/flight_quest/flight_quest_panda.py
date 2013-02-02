@@ -197,21 +197,21 @@ def flight_history_row_in_test_set(row, cutoff_time, us_icao_codes):
     departure_time = get_departure_time(row)
     if departure_time is not np.nan and departure_time > cutoff_time:
         return False
-    if row["actual_gate_departure"] == "MISSING":
+    if row["actual_gate_departure"] is np.nan:
         return False
-    if row["actual_runway_departure"] == "MISSING":
+    if row["actual_runway_departure"] is np.nan:
         return False
-    if row["actual_runway_departure"] > cutoff_time:
+    if row["actual_runway_departure"] is not np.nan and row["actual_runway_departure"] > cutoff_time:
         return False
-    if row["actual_runway_arrival"] == "MISSING":
+    if row["actual_runway_arrival"] is np.nan:
         return False
-    if row["actual_runway_arrival"] <= cutoff_time:
+    if row["actual_runway_arrival"] is not np.nan and row["actual_runway_arrival"] <= cutoff_time:
         return False
-    if row["actual_gate_arrival"] == "MISSING":
+    if row["actual_gate_arrival"] is np.nan:
         return False
-    if row["actual_gate_arrival"] < row["actual_runway_arrival"]:
+    if row["actual_gate_arrival"] is not np.nan and row["actual_runway_arrival"] is not np.nan and row["actual_gate_arrival"] < row["actual_runway_arrival"]:
         return False   
-    if row["actual_runway_departure"] < row["actual_gate_departure"]:
+    if row["actual_runway_departure"] is not np.nan and row["actual_gate_departure"] is not np.nan and row["actual_runway_departure"] < row["actual_gate_departure"]:
         return False 
     if row["arrival_airport_icao_code"] not in us_icao_codes:
         return False

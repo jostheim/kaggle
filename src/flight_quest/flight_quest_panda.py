@@ -1160,9 +1160,9 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None):
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
     except Exception as e:
-        continue
+        return all_dfs
     if df is None:
-        continue
+        return all_dfs
     test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
     if test_df is not None:
         print "df before removal of test", df

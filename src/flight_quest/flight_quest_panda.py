@@ -195,7 +195,7 @@ def flight_history_row_in_test_set(row, cutoff_time, us_icao_codes):
     meets the other requirements to be a test row (continental US flight)
     """
     departure_time = get_departure_time(row)
-    if departure_time > cutoff_time:
+    if departure_time is not np.nan and departure_time > cutoff_time:
         return False
     if row["actual_gate_departure"] == "MISSING":
         return False

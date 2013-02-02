@@ -128,7 +128,7 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = 
     df = pd.read_csv(filename, index_col=0, parse_dates=[8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     if cutoff_time is not None:
         # grabs flights eligible for test set
-        df = df.select(lambda i: flight_history_row_in_test_set(df.ix(i), cutoff_time, us_icao_codes))
+        df = df.select(lambda i: flight_history_row_in_test_set(df.ix[i], cutoff_time, us_icao_codes))
         # masks some of the data
         cols_to_mask = get_flight_history_date_columns_to_hide()
         rows_modified = 0

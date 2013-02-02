@@ -122,12 +122,102 @@ def cast_date_columns(df, date_cols):
     pass
 
 def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = None):
+    codes_file = os.path.join(data_prefix, "Reference", "usairporticaocodes.txt")
+    us_icao_codes = get_us_airport_icao_codes(codes_file)
     filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)
     df = pd.read_csv(filename, index_col=0, parse_dates=[8,9,10,11,12,13,14,15,16,17], date_parser=parse_date_time, na_values=na_values)
     if cutoff_time is not None:
-        df = df[df['actual_departure_time'] > cutoff_time]
+        # grabs flights eligible for test set
+        df = df.select(lambda i: flight_history_row_in_test_set(df.irow(i), cutoff_time, us_icao_codes))
+        # masks some of the data
+        cols_to_mask = get_flight_history_date_columns_to_hide()
+        rows_modified = 0
+        for i in range(len(df)):
+            row_modified = False
+            for col in cols_to_mask:
+                if df[col][i] == "MISSING":
+                    continue
+                if df[col][i] <= cutoff_time:
+                    continue
+                df[col][i] = "HIDDEN"
+                row_modified = True
+            if row_modified:
+                rows_modified += 1
+
     cast_date_columns(df, flight_history_date_cols)
     return df
+
+def get_us_airport_icao_codes(codes_file):
+    df = pd.read_csv(codes_file)
+    return set(df["icao_code"])
+
+def get_flight_history_date_columns_to_hide():
+    """
+    Returns a list of date columns with values that should be hidden based on the cutoff time.
+    """
+    flight_history_date_columns_to_hide = [
+        "actual_gate_departure",
+        "actual_gate_arrival",
+        "actual_runway_departure",
+        "actual_runway_arrival",
+    ]
+
+    return flight_history_date_columns_to_hide
+
+def hide_flight_history_columns(df, cutoff_time):
+    cols_to_mask = get_flight_history_date_columns_to_hide()
+    rows_modified = 0
+
+    for i in range(len(df)):
+        row_modified = False
+        for col in cols_to_mask:
+            if df[col][i] == "MISSING":
+                continue
+            if df[col][i] <= cutoff_time:
+                continue
+            df[col][i] = "HIDDEN"
+            row_modified = True
+        if row_modified:
+            rows_modified += 1
+
+def get_departure_time(row):
+    if row["published_departure"] != "MISSING":
+        return row["published_departure"]
+    if row["scheduled_gate_departure"] != "MISSING":
+        return row["scheduled_gate_departure"]
+    if row["scheduled_runway_departure"] != "MISSING":
+        return row["scheduled_runway_departure"]
+    return "MISSING"
+
+def flight_history_row_in_test_set(row, cutoff_time, us_icao_codes):
+    """
+    This function returns True if the flight is in the air and it
+    meets the other requirements to be a test row (continental US flight)
+    """
+    departure_time = get_departure_time(row)
+    if departure_time > cutoff_time:
+        return False
+    if row["actual_gate_departure"] == "MISSING":
+        return False
+    if row["actual_runway_departure"] == "MISSING":
+        return False
+    if row["actual_runway_departure"] > cutoff_time:
+        return False
+    if row["actual_runway_arrival"] == "MISSING":
+        return False
+    if row["actual_runway_arrival"] <= cutoff_time:
+        return False
+    if row["actual_gate_arrival"] == "MISSING":
+        return False
+    if row["actual_gate_arrival"] < row["actual_runway_arrival"]:
+        return False   
+    if row["actual_runway_departure"] < row["actual_gate_departure"]:
+        return False 
+    if row["arrival_airport_icao_code"] not in us_icao_codes:
+        return False
+    if row["departure_airport_icao_code"] not in us_icao_codes:
+        return False
+    return True
 
 def get_test_flight_history(data_prefix, data_rev_prefix, date_prefix):
     filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)

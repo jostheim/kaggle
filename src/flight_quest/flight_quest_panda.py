@@ -133,19 +133,7 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = 
         # grabs flights eligible for test set
         df = df.select(lambda i: flight_history_row_in_test_set(df.ix[i], cutoff_time, us_icao_codes))
         # masks some of the data
-        cols_to_mask = get_flight_history_date_columns_to_hide()
-        rows_modified = 0
-        for i in df.index:
-            row_modified = False
-            for col in cols_to_mask:
-                if df[col][i] is np.nan:
-                    continue
-                if df[col][i] <= cutoff_time:
-                    continue
-                df[col][i] = np.nan
-                row_modified = True
-            if row_modified:
-                rows_modified += 1
+        hide_flight_history_columns(df, cutoff_time)
 
     cast_date_columns(df, flight_history_date_cols)
     return df
@@ -170,15 +158,14 @@ def get_flight_history_date_columns_to_hide():
 def hide_flight_history_columns(df, cutoff_time):
     cols_to_mask = get_flight_history_date_columns_to_hide()
     rows_modified = 0
-
-    for i in range(len(df)):
+    for i in df.index:
         row_modified = False
         for col in cols_to_mask:
-            if df[col][i] == "MISSING":
+            if df[col][i] is np.nan:
                 continue
             if df[col][i] <= cutoff_time:
                 continue
-            df[col][i] = "HIDDEN"
+            df[col][i] = np.nan
             row_modified = True
         if row_modified:
             rows_modified += 1
@@ -696,9 +683,9 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_tim
     atsccgrounddelay_df = pd.read_csv(atsccgrounddelay_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4,5,9,10,11], date_parser=parse_date_time)
     if cutoff_time is not None:
         atsccgrounddelay_df = atsccgrounddelay_df[atsccgrounddelay_df['effective_start_time'] < cutoff_time]
-        for ix in atsccgrounddelay_df[[atsccgrounddelay_df['invalidated_time'] > cutoff_time]].index: 
+        for ix in atsccgrounddelay_df[atsccgrounddelay_df['invalidated_time'] > cutoff_time].index: 
             atsccgrounddelay_df.ix[ix]["invalidated_time"] = np.nan
-        for ix in atsccgrounddelay_df[[atsccgrounddelay_df['cancelled_time'] > cutoff_time]].index:
+        for ix in atsccgrounddelay_df[atsccgrounddelay_df['cancelled_time'] > cutoff_time].index:
             atsccgrounddelay_df.ix[ix]["cancelled_time"] = np.nan
     cast_date_columns(atsccgrounddelay_df, atscc_ground_delay_date_cols)
     atsccgrounddelayairports_filename = "{0}{1}/{2}/atscc/flightstats_atsccgrounddelayairports.csv".format(data_prefix, data_rev_prefix, date_prefix)

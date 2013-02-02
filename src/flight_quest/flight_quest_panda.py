@@ -114,7 +114,7 @@ def get_column_type(series):
 
 def cast_date_columns(df, date_cols):
     for col in date_cols:
-        df[df.columns[col]] = pd.Series(df[df.columns[col]].values, dtype='M8[ns]')
+        df[df.columns[col]-1] = pd.Series(df[df.columns[col]-1].values, dtype='M8[ns]')
  
 def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = None):
     filename = "{0}{1}/{2}/FlightHistory/flighthistory.csv".format(data_prefix, data_rev_prefix, date_prefix)

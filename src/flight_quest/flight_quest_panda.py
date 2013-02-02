@@ -1247,14 +1247,14 @@ if __name__ == '__main__':
                 subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
                 cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
+                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
         for i in xrange(5):
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
                 cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
+                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "concat":

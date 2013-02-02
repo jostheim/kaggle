@@ -47,7 +47,10 @@ def parse_date_time(val):
     if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
         #'2012-11-12 17:30:00+00:00
         try:
-            return (dateutil.parser.parse(val))
+            datetime_obj = dateutil.parser.parse(val)
+            datetime_obj = datetime_obj.replace(tzinfo=timezone('UTC'))
+            datetime_obj = datetime_obj.astimezone(timezone('UTC'))
+            return datetime_obj
         except ValueError as e:
 #            print e
             return np.nan

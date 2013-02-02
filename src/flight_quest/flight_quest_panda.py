@@ -90,6 +90,7 @@ def write_dataframe(name, df, store):
             buffered = []
     if len(buffered) > 0:
         keys["{0}_{1}".format(name, i)] = buffered
+    print keys
     store.append_to_multiple(keys, df, keys.keys()[0])
     
 

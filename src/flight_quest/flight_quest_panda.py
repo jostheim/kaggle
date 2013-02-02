@@ -135,11 +135,11 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = 
         for i in range(len(df)):
             row_modified = False
             for col in cols_to_mask:
-                if df[col][i] == "MISSING":
+                if df[col][i] is np.nan:
                     continue
                 if df[col][i] <= cutoff_time:
                     continue
-                df[col][i] = "HIDDEN"
+                df[col][i] = np.nan
                 row_modified = True
             if row_modified:
                 rows_modified += 1

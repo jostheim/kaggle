@@ -132,7 +132,7 @@ def get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time = 
         # masks some of the data
         cols_to_mask = get_flight_history_date_columns_to_hide()
         rows_modified = 0
-        for i in range(len(df)):
+        for i in df.index:
             row_modified = False
             for col in cols_to_mask:
                 if df[col][i] is np.nan:

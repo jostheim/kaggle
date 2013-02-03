@@ -771,92 +771,95 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time =
         arrival_icing_delay = {}
         departure_icing_delay = {}
         
-        # if our scheduled gate arrival is within a ground delay
-        if row['scheduled_gate_arrival'] is not None and row['scheduled_gate_arrival'] is not np.nan:
-            
-            if atsccgrounddelay_merged_df is not None:
-                tmp = atsccgrounddelay_merged_df[atsccgrounddelay_merged_df['airport_code'] == row['arrival_airport_code']]
-                tmp = tmp[tmp['effective_start_time'] <= row['scheduled_gate_arrival']]
+        try:
+            # if our scheduled gate arrival is within a ground delay
+            if row['scheduled_gate_arrival'] is not None and row['scheduled_gate_arrival'] is not np.nan:
+                
+                if atsccgrounddelay_merged_df is not None:
+                    tmp = atsccgrounddelay_merged_df[atsccgrounddelay_merged_df['airport_code'] == row['arrival_airport_code']]
+                    tmp = tmp[tmp['effective_start_time'] <= row['scheduled_gate_arrival']]
+                    tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_arrival']]
+                    tmp = tmp.sort_index(by='effective_start_time')
+                    i = 0
+                    for ix_tmp, row_tmp in tmp.iterrows():
+                        for j, val in enumerate(row_tmp):
+                            arrival_grounddelay["arrival_ground_delay_{0}_{1}".format(i, tmp.columns[j])] = val
+                            #print row['scheduled_gate_arrival'], row['departure_airport_code'], row_tmp['effective_start_time'], row_tmp['effective_end_time'], row_tmp['airport_code']
+                        i += 1
+                    if len(arrival_grounddelay) > 0:
+                        arrival_grounddelay['flight_history_id'] = ix
+                        arrival_ground_delays.append(arrival_grounddelay)
+                    
+                tmp = atsccdelay_df[atsccdelay_df['airport_code'] == row['arrival_airport_code']]
+                tmp = tmp[tmp['start_time'] <= row['scheduled_gate_arrival']]
                 tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_arrival']]
-                tmp = tmp.sort_index(by='effective_start_time')
+                tmp = tmp.sort_index(by='start_time')
                 i = 0
                 for ix_tmp, row_tmp in tmp.iterrows():
                     for j, val in enumerate(row_tmp):
-                        arrival_grounddelay["arrival_ground_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                        #print row['scheduled_gate_arrival'], row['departure_airport_code'], row_tmp['effective_start_time'], row_tmp['effective_end_time'], row_tmp['airport_code']
+                        arrival_delay["arrival_delay_{0}_{1}".format(i, tmp.columns[j])] = val
                     i += 1
-                if len(arrival_grounddelay) > 0:
-                    arrival_grounddelay['flight_history_id'] = ix
-                    arrival_ground_delays.append(arrival_grounddelay)
+                if len(arrival_delay) > 0:
+                    arrival_delay['flight_history_id'] = ix
+                    arrival_delays.append(arrival_delay)
                 
-            tmp = atsccdelay_df[atsccdelay_df['airport_code'] == row['arrival_airport_code']]
-            tmp = tmp[tmp['start_time'] <= row['scheduled_gate_arrival']]
-            tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_arrival']]
-            tmp = tmp.sort_index(by='start_time')
-            i = 0
-            for ix_tmp, row_tmp in tmp.iterrows():
-                for j, val in enumerate(row_tmp):
-                    arrival_delay["arrival_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                i += 1
-            if len(arrival_delay) > 0:
-                arrival_delay['flight_history_id'] = ix
-                arrival_delays.append(arrival_delay)
-            
-            tmp = atsccdeicing_df[atsccdeicing_df['airport_code'] == row['arrival_airport_code']]
-            tmp = tmp[tmp['start_time'] <= row['scheduled_gate_arrival']]
-            tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_arrival']]
-            tmp = tmp.sort_index(by='start_time')
-            i = 0
-            for ix_tmp, row_tmp in tmp.iterrows():
-                for j, val in enumerate(row_tmp):
-                    arrival_icing_delay["arrival_icing_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                i += 1
-            if len(arrival_icing_delay) > 0:
-                arrival_icing_delay['flight_history_id'] = ix
-                arrival_icing_delays.append(arrival_icing_delay)
-                
-        if row['scheduled_gate_departure'] is not None and row['scheduled_gate_departure'] is not np.nan:
-            if atsccgrounddelay_merged_df is not None:
-                tmp = atsccgrounddelay_merged_df[atsccgrounddelay_merged_df['airport_code'] == row['departure_airport_code']]
-                tmp = tmp[tmp['effective_start_time'] <= row['scheduled_gate_departure']]
+                tmp = atsccdeicing_df[atsccdeicing_df['airport_code'] == row['arrival_airport_code']]
+                tmp = tmp[tmp['start_time'] <= row['scheduled_gate_arrival']]
+                tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_arrival']]
+                tmp = tmp.sort_index(by='start_time')
+                i = 0
+                for ix_tmp, row_tmp in tmp.iterrows():
+                    for j, val in enumerate(row_tmp):
+                        arrival_icing_delay["arrival_icing_delay_{0}_{1}".format(i, tmp.columns[j])] = val
+                    i += 1
+                if len(arrival_icing_delay) > 0:
+                    arrival_icing_delay['flight_history_id'] = ix
+                    arrival_icing_delays.append(arrival_icing_delay)
+                    
+            if row['scheduled_gate_departure'] is not None and row['scheduled_gate_departure'] is not np.nan:
+                if atsccgrounddelay_merged_df is not None:
+                    tmp = atsccgrounddelay_merged_df[atsccgrounddelay_merged_df['airport_code'] == row['departure_airport_code']]
+                    tmp = tmp[tmp['effective_start_time'] <= row['scheduled_gate_departure']]
+                    tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_departure']]
+                    tmp = tmp.sort_index(by='effective_start_time')
+                    i = 0
+                    for ix_tmp, row_tmp in tmp.iterrows():
+                        for j, val in enumerate(row_tmp):
+                            departure_grounddelay["departure_ground_delay_{0}_{1}".format(i, tmp.columns[j])] = val
+                            #print row['scheduled_gate_arrival'], row['departure_airport_code'], row_tmp['effective_start_time'], row_tmp['effective_end_time'], row_tmp['airport_code']
+                        i += 1
+                    if len(departure_grounddelay) > 0:
+                        departure_grounddelay['flight_history_id'] = ix
+                        departure_ground_delays.append(departure_grounddelay)
+                        #print departure_grounddelay
+        
+                tmp = atsccdelay_df[atsccdelay_df['airport_code'] == row['departure_airport_code']]
+                tmp = tmp[tmp['start_time'] <= row['scheduled_gate_departure']]
                 tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_departure']]
-                tmp = tmp.sort_index(by='effective_start_time')
+                tmp = tmp.sort_index(by='start_time')
                 i = 0
                 for ix_tmp, row_tmp in tmp.iterrows():
                     for j, val in enumerate(row_tmp):
-                        departure_grounddelay["departure_ground_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                        #print row['scheduled_gate_arrival'], row['departure_airport_code'], row_tmp['effective_start_time'], row_tmp['effective_end_time'], row_tmp['airport_code']
+                        departure_delay["departure_delay_{0}_{1}".format(i, tmp.columns[j])] = val
                     i += 1
-                if len(departure_grounddelay) > 0:
-                    departure_grounddelay['flight_history_id'] = ix
-                    departure_ground_delays.append(departure_grounddelay)
-                    #print departure_grounddelay
-    
-            tmp = atsccdelay_df[atsccdelay_df['airport_code'] == row['departure_airport_code']]
-            tmp = tmp[tmp['start_time'] <= row['scheduled_gate_departure']]
-            tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_departure']]
-            tmp = tmp.sort_index(by='start_time')
-            i = 0
-            for ix_tmp, row_tmp in tmp.iterrows():
-                for j, val in enumerate(row_tmp):
-                    departure_delay["departure_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                i += 1
-            if len(departure_delay) > 0:
-                departure_delay['flight_history_id'] = ix
-                departure_delays.append(departure_delay)
-            
-            tmp = atsccdeicing_df[atsccdeicing_df['airport_code'] == row['departure_airport_code']]
-            tmp = tmp[tmp['start_time'] <= row['scheduled_gate_departure']]
-            tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_departure']]
-            tmp = tmp.sort_index(by='start_time')
-            i = 0
-            for ix_tmp, row_tmp in tmp.iterrows():
-                for j, val in enumerate(row_tmp):
-                    departure_icing_delay["departure_icing_delay_{0}_{1}".format(i, tmp.columns[j])] = val
-                i += 1
-            if len(departure_icing_delay) > 0:
-                departure_icing_delay['flight_history_id'] = ix
-                departure_icing_delays.append(departure_icing_delay)
+                if len(departure_delay) > 0:
+                    departure_delay['flight_history_id'] = ix
+                    departure_delays.append(departure_delay)
+                
+                tmp = atsccdeicing_df[atsccdeicing_df['airport_code'] == row['departure_airport_code']]
+                tmp = tmp[tmp['start_time'] <= row['scheduled_gate_departure']]
+                tmp = tmp[tmp['actual_end_time'] >= row['scheduled_gate_departure']]
+                tmp = tmp.sort_index(by='start_time')
+                i = 0
+                for ix_tmp, row_tmp in tmp.iterrows():
+                    for j, val in enumerate(row_tmp):
+                        departure_icing_delay["departure_icing_delay_{0}_{1}".format(i, tmp.columns[j])] = val
+                    i += 1
+                if len(departure_icing_delay) > 0:
+                    departure_icing_delay['flight_history_id'] = ix
+                    departure_icing_delays.append(departure_icing_delay)
+        except Exception as e:
+            pass
     if len(arrival_ground_delays) > 0:
         arrival_ground_delays_df = pd.DataFrame(arrival_ground_delays)
         arrival_ground_delays_df.set_index('flight_history_id', inplace=True, verify_integrity=True)

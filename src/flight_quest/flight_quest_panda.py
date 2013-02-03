@@ -1153,14 +1153,16 @@ def random_forest_cross_validate(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, exclude_df=None):
+def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, exclude_df=None, prefix=""):
     print "Working on {0}".format(subdirname)
     store_filename = 'flight_quest_{0}.h5'.format(subdirname)
     try:
-        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename, prefix=prefix)
+        before_count = len(df.index)
         if exclude_df is not None:
             keep_index = df.index - exclude_df.index
             df = df.ix[keep_index]
+            print "Number before removing features in training: {0} and after: {1}".format(before_count, len(df.index))
     except Exception as e:
         return all_dfs
     if df is None:
@@ -1251,12 +1253,11 @@ if __name__ == '__main__':
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
                 pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
-        for i in xrange(5):
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
                 cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
+                pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "concat":
@@ -1267,7 +1268,7 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
+            all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
     elif kind == "concat_cross_validate":
         sample_size = None
@@ -1275,11 +1276,12 @@ if __name__ == '__main__':
             sample_size = int(sys.argv[2])
         train_all_df = read_dataframe("all_joined", store)
         all_dfs = None
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df)
-        write_dataframe("all_joined", all_dfs, store)
+        for i in xrange(5):
+            for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+                all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
+            for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+                all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
+        write_dataframe("cv_all_joined", all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = concat(data_prefix, test_data_rev_prefix)
         write_dataframe("predict_all_joined", all_dfs, store)
@@ -1299,6 +1301,14 @@ if __name__ == '__main__':
         all_df.to_csv("predict_features.csv")
         store = pd.HDFStore('predict_features.h5')
         write_dataframe("predict_features", all_df, store)
+    elif kind == "generate_features_cross_validate":
+        unique_cols = {}
+        all_df = read_dataframe("cv_all_joined", store)
+        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+        all_df = process_into_features(all_df, unique_cols)
+        all_df.to_csv("cv_features.csv")
+        store = pd.HDFStore('cv_features.h5')
+        write_dataframe("cv_features", all_df, store)
     elif kind == "uniques":
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)

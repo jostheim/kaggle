@@ -649,9 +649,9 @@ def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix, cutoff_time=Non
     atsccdeicing_df = pd.read_csv(atsccdeicing_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
     if cutoff_time is not None:
         atsccdeicing_df = atsccdeicing_df[atsccdeicing_df['capture_time'] < cutoff_time]
-        for ix in atsccdeicing_df[atsccdeicing_df['end_time'] > cutoff_time]:
+        for ix in atsccdeicing_df[atsccdeicing_df['end_time'] > cutoff_time].index:
             atsccdeicing_df[ix]["end_time"] = np.nan
-        for ix in atsccdeicing_df[atsccdeicing_df['invalidated_time'] > cutoff_time]:
+        for ix in atsccdeicing_df[atsccdeicing_df['invalidated_time'] > cutoff_time].index:
             atsccdeicing_df[ix]["invalidated_time"] = np.nan
     cast_date_columns(atsccdeicing_df, atscc_deicing_date_cols)
     end_time = []
@@ -1150,11 +1150,14 @@ def random_forest_cross_validate(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None):
+def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, exclude_df=None):
     print "Working on {0}".format(subdirname)
     store_filename = 'flight_quest_{0}.h5'.format(subdirname)
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+        if exclude_df is not None:
+            keep_index = df.index - exclude_df.index
+            df = df.ix[keep_index]
     except Exception as e:
         return all_dfs
     if df is None:
@@ -1262,6 +1265,17 @@ if __name__ == '__main__':
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
+        write_dataframe("all_joined", all_dfs, store)
+    elif kind == "concat_cross_validate":
+        sample_size = None
+        if len(sys.argv) > 2:
+            sample_size = int(sys.argv[2])
+        train_all_df = read_dataframe("all_joined", store)
+        all_dfs = None
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df)
         write_dataframe("all_joined", all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = concat(data_prefix, test_data_rev_prefix)

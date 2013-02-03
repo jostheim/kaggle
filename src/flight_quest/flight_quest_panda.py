@@ -650,9 +650,9 @@ def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix, cutoff_time=Non
     if cutoff_time is not None:
         atsccdeicing_df = atsccdeicing_df[atsccdeicing_df['capture_time'] < cutoff_time]
         for ix in atsccdeicing_df[atsccdeicing_df['end_time'] > cutoff_time].index:
-            atsccdeicing_df[ix]["end_time"] = np.nan
+            atsccdeicing_df.ix[ix]["end_time"] = np.nan
         for ix in atsccdeicing_df[atsccdeicing_df['invalidated_time'] > cutoff_time].index:
-            atsccdeicing_df[ix]["invalidated_time"] = np.nan
+            atsccdeicing_df.ix[ix]["invalidated_time"] = np.nan
     cast_date_columns(atsccdeicing_df, atscc_deicing_date_cols)
     end_time = []
     for ix,row in atsccdeicing_df.iterrows():

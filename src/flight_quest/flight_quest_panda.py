@@ -669,9 +669,9 @@ def get_atscc_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
     if cutoff_time is not None:
         atsccdelay_df = atsccdelay_df[atsccdelay_df['capture_time'] < cutoff_time]
         for ix in atsccdelay_df[atsccdelay_df['end_time'] > cutoff_time].index:
-            atsccdelay_df[ix]['end_time'] = np.nan
+            atsccdelay_df,ix[ix]['end_time'] = np.nan
         for ix in atsccdelay_df[atsccdelay_df['invalidated_time'] > cutoff_time].index:
-            atsccdelay_df[ix]['invalidated_time'] = np.nan
+            atsccdelay_df.ix[ix]['invalidated_time'] = np.nan
     cast_date_columns(atsccdelay_df, atscc_delay_date_cols)
     end_time = []
     for ix,row in atsccdelay_df.iterrows():

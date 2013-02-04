@@ -892,7 +892,6 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     if "{0}joined_{1}".format(prefix, date_prefix) in store and not force: 
         try:
             df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
-            df = df.to_sparse()
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
             return df
         except Exception as e:
@@ -937,7 +936,6 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     except Exception as e:
         print e
         print traceback.format_exc()
-    df = df.to_sparse()
     return df
 
 def get_joined_data_proxy(args):
@@ -1196,7 +1194,6 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     df_tmp = df_tmp.ix[rows]
     if all_dfs is None:
         all_dfs = df_tmp
-        print "all_dfs after",all_dfs.index
     else:
         all_dfs = all_dfs.append(df_tmp)
         all_dfs.drop_duplicates(take_last=True, inplace=True)
@@ -1277,6 +1274,7 @@ if __name__ == '__main__':
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
+            print "size of the all_dfs", sys.getsizeof(all_dfs)/1024./1024.
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)

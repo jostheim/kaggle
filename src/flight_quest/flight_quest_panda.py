@@ -25,6 +25,7 @@ do_not_convert_to_date = ["icao_aircraft_type_actual"]
 actual_class = "actual_gate_arrival"
 scheduled_class = "scheduled_gate_arrival"
 learned_class_name = "gate_arrival_diff"
+global learned_class_name
 features_to_remove = ["actual_gate_arrival", "gate_arrival_diff", 'actual_gate_arrival_weekday', 'actual_gate_arrival_day', 'actual_gate_arrival_hour', 'actual_gate_arrival_minute']
 #features_to_remove = ["actual_runway_arrival", "runway_arrival_diff", 'actual_runway_arrival_weekday', 'actual_runway_arrival_day', 'actual_runway_arrival_hour', 'actual_runway_arrival_minute']
 
@@ -1096,10 +1097,11 @@ def get_expectations(cfr, features):
         expectations.append(expectation)
     return expectations
 
-def get_metric(cfr, features, testcv, unique_classes):
+def get_metric(cfr, features, targets):
     sum_diff = 0.0
-    p = cfr.predict_proba(features[testcv])
-    for k, target in enumerate(targets[testcv]):
+    p = cfr.predict_proba(features)
+    unique_classes = sorted(cfr.classes_)
+    for k, target in enumerate(targets):
         # expectation across all classes
         expectation = np.sum(unique_classes*p[k])
         sum_diff += np.sqrt(np.power((expectation - target),2))
@@ -1154,7 +1156,7 @@ def random_forest_cross_validate(targets, features):
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )
 
-def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, exclude_df=None, prefix=""):
+def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, exclude_df=None, include_df=None, prefix=""):
     print "Working on {0}".format(subdirname)
     store_filename = 'flight_quest_{0}.h5'.format(subdirname)
     try:
@@ -1164,6 +1166,8 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
             keep_index = df.index - exclude_df.index
             df = df.ix[keep_index]
             print "Number before removing features in training: {0} and after: {1}".format(before_count, len(df.index))
+        if include_df is not None:
+            df = df.ix[include_df.index]
     except Exception as e:
         return all_dfs
     if df is None:
@@ -1271,6 +1275,11 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
+    elif kind == "concat_predict":
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+            include_df = pd.read_csv('{0}{1}/tst_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
+            all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, include_df=include_df)
+        write_dataframe("predict_all_joined", all_dfs, store)
     elif kind == "concat_cross_validate":
         sample_size = None
         if len(sys.argv) > 2:
@@ -1282,10 +1291,7 @@ if __name__ == '__main__':
                 all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-        write_dataframe("cv_all_joined", all_dfs, store)
-    elif kind == "concat_predict":
-        all_dfs = concat(data_prefix, test_data_rev_prefix)
-        write_dataframe("predict_all_joined", all_dfs, store)
+            write_dataframe("cv_all_joined_{0}".format(i), all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
         all_df = read_dataframe("all_joined", store)
@@ -1304,40 +1310,53 @@ if __name__ == '__main__':
         write_dataframe("predict_features", all_df, store)
     elif kind == "generate_features_cross_validate":
         unique_cols = {}
-        all_df = read_dataframe("cv_all_joined", store)
-        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        all_df = process_into_features(all_df, unique_cols)
-        all_df.to_csv("cv_features.csv")
-        store = pd.HDFStore('cv_features.h5')
-        write_dataframe("cv_features", all_df, store)
+        for i in xrange(5):
+            all_df = read_dataframe("cv_all_joined_{0}".format(i), store)
+            unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+            all_df = process_into_features(all_df, unique_cols)
+            all_df.to_csv("cv_features_{0}.csv".format(i))
+            store = pd.HDFStore('cv_features_{0}.h5'.format(i))
+            write_dataframe("cv_features_{0}".format(i), all_df, store)
     elif kind == "uniques":
+        unique_cols = {}
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
-            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store)
-            unique_cols = {}
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
             unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-            pickle.dump(unique_cols, open("unique_columns.p", "wb"))
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            print "Working on {0}".format(subdirname)
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            df = get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
+            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
+        pickle.dump(unique_cols, open("unique_columns.p", "wb"))
     elif kind == "cross_validate":
-        print "reading features from store"
+        # assumes model already learned
+        print "reading training features from store"
         try:
             all_df = read_dataframe("features", store)
         except Exception as e:
             all_df = pd.read_csv("features.csv", index_col=0)
-        for i, (column, series) in enumerate(all_df.iteritems()):
-            if series.dtype is object or str(series.dtype) == "object":
-                print "AFter convert types {0} is still an object".format(column)
-                if len(series.dropna()) > 0:
-                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
-                del all_df[column]
-        targets = all_df[learned_class_name].dropna()
-        # may want to rebin here, rounding to 5 minutes
-        targets = targets.apply(lambda x: myround(x, base=1))
-        print targets
-        features = all_df.ix[all_df[learned_class_name].dropna().index]
-        # remove the target from the features
-        del features[learned_class_name]
-        print features
-        random_forest_cross_validate(targets, features)
+        # load the model
+        cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
+        for i in xrange(5):
+            try:
+                test_all_df = read_dataframe("cv_features_{0}".format(i), store)
+            except Exception as e:
+                test_all_df = pd.read_csv("cv_features_{0}.csv".format(i), index_col=0)
+            # This should normalize the features used for learning columns with the features used for predicting
+            for column in all_df.columns:
+                if column not in test_all_df.columns:
+                    test_all_df[column] = pd.Series([], index=all_df.index)
+            for column in test_all_df.columns:
+                if column not in all_df.columns:
+                    del test_all_df[column]
+            targets = test_all_df[learned_class_name].dropna()
+            features = test_all_df.ix[test_all_df[learned_class_name].dropna().index]
+            # remove the target from the features
+            del features[learned_class_name]
+            metric = get_metric(cfr, features, test_all_df)
+            print "CV: {0} metric: {1}".format(i, metric)
     elif kind == "learn":
         print "reading features from store"
         try:
@@ -1359,7 +1378,7 @@ if __name__ == '__main__':
         del features[learned_class_name]
         print features
         cfr = random_forest_learn(targets, features)
-        pickle.dump(cfr, open("cfr_model.p", 'wb'))
+        pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
     elif kind == "predict":
         print "reading features from store"
         cfr = pickle.load(open("cfr_model.p", 'rb'))
@@ -1369,6 +1388,9 @@ if __name__ == '__main__':
         for column in all_df.columns:
             if column not in test_all_df.columns:
                 test_all_df[column] = pd.Series([], index=all_df.index)
+        for column in test_all_df.columns:
+            if column not in all_df.columns:
+                del test_all_df[column]
         # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
         # but the one I am targeting
         for col in features_to_remove:

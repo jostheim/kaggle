@@ -22,10 +22,10 @@ import traceback
 
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
+global learned_class_name, actual_class, scheduled_class
 actual_class = "actual_gate_arrival"
 scheduled_class = "scheduled_gate_arrival"
 learned_class_name = "gate_arrival_diff"
-global learned_class_name
 features_to_remove = ["actual_gate_arrival", "gate_arrival_diff", 'actual_gate_arrival_weekday', 'actual_gate_arrival_day', 'actual_gate_arrival_hour', 'actual_gate_arrival_minute']
 #features_to_remove = ["actual_runway_arrival", "runway_arrival_diff", 'actual_runway_arrival_weekday', 'actual_runway_arrival_day', 'actual_runway_arrival_hour', 'actual_runway_arrival_minute']
 
@@ -1198,6 +1198,9 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     else:
         all_dfs = all_dfs.append(df_tmp)
         all_dfs.drop_duplicates(take_last=True, inplace=True)
+    df = None
+    df_tmp = None
+    test_df = None
     return all_dfs
 
 def rebin_targets(targets, nbins):

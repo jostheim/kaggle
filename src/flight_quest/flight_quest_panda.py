@@ -892,6 +892,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     if "{0}joined_{1}".format(prefix, date_prefix) in store and not force: 
         try:
             df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
+            df = df.to_sparse()
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
             return df
         except Exception as e:
@@ -936,6 +937,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     except Exception as e:
         print e
         print traceback.format_exc()
+    df = df.to_sparse()
     return df
 
 def get_joined_data_proxy(args):

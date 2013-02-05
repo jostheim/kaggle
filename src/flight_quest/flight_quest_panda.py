@@ -1173,7 +1173,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
             print "Number before excluding features: {0} and after: {1}".format(before_count, len(df.index))
         before_count = len(df.index)
         if include_df is not None:
-            df = df.ix[include_df.index]
+            df = df.ix[include_df.index & df.index]
             print "after", df
             print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
     except Exception as e:

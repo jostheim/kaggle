@@ -1383,7 +1383,7 @@ if __name__ == '__main__':
         pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
     elif kind == "predict":
         print "reading features from store"
-        cfr = pickle.load(open("cfr_model.p", 'rb'))
+        cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
         test_all_df = read_dataframe("predict_features", store)
         all_df = read_dataframe("features", store)
         # This should normalize the features used for learning columns with the features used for predicting
@@ -1398,6 +1398,7 @@ if __name__ == '__main__':
         for col in features_to_remove:
             del features[col]
         expectations = get_expectations(cfr, features)
+        print expectations
         
 
 

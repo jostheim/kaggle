@@ -652,6 +652,7 @@ def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix, cutoff_time=Non
         atsccdeicing_df = pd.read_csv(atsccdeicing_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
     except:
         print "deicing error, returning none", date_prefix
+        return atsccdeicing_df
     if cutoff_time is not None:
         atsccdeicing_df = atsccdeicing_df[atsccdeicing_df['capture_time'] < cutoff_time]
         for ix in atsccdeicing_df[atsccdeicing_df['end_time'] > cutoff_time].index:

@@ -1178,26 +1178,16 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
         return all_dfs
     if df is None:
         return all_dfs
-    test_df = get_test_flight_history(data_prefix, 'PublicLeaderboardSet', subdirname)
-    if test_df is not None:
-        print "df before removal of test", df
-        # takes a diff of the indices
-        print "test indices: {0}".format(test_df.index)
-        test_indices = df.index - test_df.index
-        print "test_indices diff: {0}".format(test_indices)
-        df = df.ix[test_indices]
-        print "df after removal of test {0}".format(df)
     # we'll need to change this for runway arrival
     df[learned_class_name] = df[actual_class] - df[scheduled_class]
     df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     # we have to have learned_class_name b/c it is the target so reduce set to
     # non-nan values
     df_tmp = df.ix[df[learned_class_name].dropna().index]
-    samples = len(df_tmp.index) / 2
-    if samples is not None:
+    if sample_size is not None:
         samples = sample_size
-    rows = random.sample(df_tmp.index, samples)
-    df_tmp = df_tmp.ix[rows]
+        rows = random.sample(df_tmp.index, samples)
+        df_tmp = df_tmp.ix[rows]
     if all_dfs is None:
         all_dfs = df_tmp
     else:

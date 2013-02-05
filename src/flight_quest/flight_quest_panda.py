@@ -1414,7 +1414,8 @@ if __name__ == '__main__':
         # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
         # but the one I am targeting
         for col in features_to_remove:
-            del features[col]
+            if col in test_all_df.columns:
+                del test_all_df[col]
         expectations = get_expectations(cfr, features)
         print expectations
         

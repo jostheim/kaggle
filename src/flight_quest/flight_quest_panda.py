@@ -1093,12 +1093,14 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
         return unique_cols
 
 def get_expectations(cfr, features):
+    predicted = cfr.predict(features)
     p = cfr.predict_proba(features)
     unique_classes = sorted(cfr.classes_[0])
     expectations = []
     for k, feature in enumerate(features):
         expectation = np.sum(unique_classes*p[k])
         expectations.append(expectation)
+        print expectation, predicted[k]
     return expectations
 
 def get_metric(cfr, features, targets):
@@ -1413,13 +1415,14 @@ if __name__ == '__main__':
         for column in test_all_df.columns:
             if column not in all_df.columns:
                 del test_all_df[column]
+        # re-index with the columns from the learned features to establish proper ordering
+        df.reindex(columns=all_df.columns)
         # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
         # but the one I am targeting
         for col in features_to_remove:
             if col in test_all_df.columns:
                 del test_all_df[col]
         expectations = get_expectations(cfr, test_all_df)
-        print expectations
         
 
 

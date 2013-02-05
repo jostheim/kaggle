@@ -1384,8 +1384,26 @@ if __name__ == '__main__':
     elif kind == "predict":
         print "reading features from store"
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
-        test_all_df = read_dataframe("predict_features", store)
-        all_df = read_dataframe("features", store)
+        try:
+            test_all_df = read_dataframe("predict_features", store)
+        except Exception as e:
+            test_all_df = pd.read_csv("predict_features.csv", index_col=0)
+        for i, (column, series) in enumerate(test_all_df.iteritems()):
+            if series.dtype is object or str(series.dtype) == "object":
+                print "AFter convert types {0} is still an object".format(column)
+                if len(series.dropna()) > 0:
+                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
+                del test_all_df[column]
+        try:
+            all_df = read_dataframe("features", store)
+        except Exception as e:
+            all_df = pd.read_csv("features.csv", index_col=0)
+        for i, (column, series) in enumerate(all_df.iteritems()):
+            if series.dtype is object or str(series.dtype) == "object":
+                print "AFter convert types {0} is still an object".format(column)
+                if len(series.dropna()) > 0:
+                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
+                del all_df[column]
         # This should normalize the features used for learning columns with the features used for predicting
         for column in all_df.columns:
             if column not in test_all_df.columns:

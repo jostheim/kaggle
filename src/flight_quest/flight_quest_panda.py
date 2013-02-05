@@ -647,7 +647,11 @@ def get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
 
 def get_atscc_deicing(data_prefix, data_rev_prefix, date_prefix, cutoff_time=None):
     atsccdeicing_filename = "{0}{1}/{2}/atscc/flightstats_atsccdeicing.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    atsccdeicing_df = pd.read_csv(atsccdeicing_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
+    atsccdeicing_df = None
+    try:
+        atsccdeicing_df = pd.read_csv(atsccdeicing_filename, index_col=[0], na_values=na_values, parse_dates=[1,2,3,4], date_parser=parse_date_time)
+    except:
+        print "deicing error, returning none", date_prefix
     if cutoff_time is not None:
         atsccdeicing_df = atsccdeicing_df[atsccdeicing_df['capture_time'] < cutoff_time]
         for ix in atsccdeicing_df[atsccdeicing_df['end_time'] > cutoff_time].index:
@@ -896,27 +900,26 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
             return df
         except Exception as e:
             print e
-    else:
-        print "Working on {0}".format(date_prefix)
-        df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        asdi_disposition = get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
-        joiners = [events, asdi_disposition, asdi_merged]
-        df = df.join(joiners)
-        print "joined events and asdi"
-        per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        for per_flight in per_flights:
-            if per_flight is not None:
-                df = df.join(per_flight)
-        print "joined atscc"
+    print "Working on {0}".format(date_prefix)
+    df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    asdi_disposition = get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
+    joiners = [events, asdi_disposition, asdi_merged]
+    df = df.join(joiners)
+    print "joined events and asdi"
+    per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    for per_flight in per_flights:
+        if per_flight is not None:
+            df = df.join(per_flight)
+    print "joined atscc"
 #        joiners = per_flights
 #        df = df.join(joiners)
-        metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-        df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
-        df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-        print "joined metar"
+    metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
+    df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+    print "joined metar"
 #        fbwind_arrival = get_fbwind("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
 #        fbwind_departure = get_fbwind("departure", data_prefix, data_rev_prefix, date_prefix,, cutoff_time=cutoff_time)
 #        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
@@ -925,12 +928,12 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
 #        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
 #        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
 #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
-        print "column type counts: {0}".format(df.get_dtype_counts())
-        try:
-            write_dataframe("{0}joined_{1}".format(prefix, date_prefix), df, store)
-        except Exception as e:
-            print e
-            print traceback.format_exc()
+    print "column type counts: {0}".format(df.get_dtype_counts())
+    try:
+        write_dataframe("{0}joined_{1}".format(prefix, date_prefix), df, store)
+    except Exception as e:
+        print e
+        print traceback.format_exc()
     try:
         store.close()
     except Exception as e:

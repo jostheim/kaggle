@@ -1166,6 +1166,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename, prefix=prefix)
         before_count = len(df.index)
+        print df
         if exclude_df is not None:
             keep_index = df.index - exclude_df.index
             df = df.ix[keep_index]
@@ -1173,6 +1174,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
         before_count = len(df.index)
         if include_df is not None:
             df = df.ix[include_df.index]
+            print "after", df
             print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
     except Exception as e:
         return all_dfs

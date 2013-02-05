@@ -1178,6 +1178,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
         return all_dfs
     if df is None:
         return all_dfs
+    df_tmp = df
     if "predict" not in prefix:
         # we'll need to change this for runway arrival
         df[learned_class_name] = df[actual_class] - df[scheduled_class]

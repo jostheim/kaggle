@@ -1384,6 +1384,7 @@ if __name__ == '__main__':
     elif kind == "predict":
         print "reading features from store"
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
+        cfr.set_params(n_jobs=1)
         try:
             test_all_df = read_dataframe("predict_features", store)
         except Exception as e:

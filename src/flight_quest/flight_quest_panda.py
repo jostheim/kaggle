@@ -1416,7 +1416,7 @@ if __name__ == '__main__':
             if column not in all_df.columns:
                 del test_all_df[column]
         # re-index with the columns from the learned features to establish proper ordering
-        df.reindex(columns=all_df.columns)
+        test_all_df = test_all_df.reindex(columns=all_df.columns)
         # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
         # but the one I am targeting
         for col in features_to_remove:

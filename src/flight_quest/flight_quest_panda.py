@@ -1416,7 +1416,7 @@ if __name__ == '__main__':
         for col in features_to_remove:
             if col in test_all_df.columns:
                 del test_all_df[col]
-        expectations = get_expectations(cfr, features)
+        expectations = get_expectations(cfr, test_all_df)
         print expectations
         
 

@@ -1097,6 +1097,8 @@ def get_expectations(cfr, features):
     unique_classes = sorted(cfr.classes_)
     expectations = []
     for k, probs in enumerate(p):
+        print "len(prob)", len(probs)
+        print "len(unique)", len(unique_classes)
         expectation = np.sum(unique_classes*probs[k])
         expectations.append(expectation)
     return expectations

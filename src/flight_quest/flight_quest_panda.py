@@ -1407,7 +1407,7 @@ if __name__ == '__main__':
         # This should normalize the features used for learning columns with the features used for predicting
         for column in all_df.columns:
             if column not in test_all_df.columns:
-                test_all_df[column] = pd.Series([], index=all_df.index)
+                test_all_df[column] = pd.Series(index=all_df.index)
         for column in test_all_df.columns:
             if column not in all_df.columns:
                 del test_all_df[column]

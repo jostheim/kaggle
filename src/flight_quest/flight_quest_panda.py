@@ -1280,11 +1280,11 @@ if __name__ == '__main__':
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
-            print "size of the all_dfs", sys.getsizeof(all_dfs)/1024./1024.
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         write_dataframe("all_joined", all_dfs, store)
     elif kind == "concat_predict":
+        all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
             all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, include_df=include_df)

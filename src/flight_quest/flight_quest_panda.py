@@ -1183,6 +1183,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     # we have to have learned_class_name b/c it is the target so reduce set to
     # non-nan values
+    print df[learned_class_name].dropna()
     df_tmp = df.ix[df[learned_class_name].dropna().index]
     if sample_size is not None:
         samples = sample_size

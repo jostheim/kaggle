@@ -887,7 +887,7 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time =
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False, prefix="", cutoff_time = None):
+def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False, prefix="", cutoff_time = None, generate_features=None, unique_cols={}):
     try:
         store = pd.HDFStore(prefix+store_filename)
     except Exception as e:
@@ -935,6 +935,11 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     except Exception as e:
         print e
         print traceback.format_exc()
+    
+    if generate_features:
+        features_df = process_into_features(df, unique_cols)
+        features_df.to_csv("{0}features_{1}.csv".format(prefix, date_prefix))
+    
     try:
         store.close()
     except Exception as e:
@@ -954,9 +959,15 @@ def get_joined_data_proxy(args):
     cutoff_time = None
     if len(args) > 5:
         cutoff_time = args[5]
+    generate_features = False
+    if len(args) > 6:
+        generate_features = args[6]
+    unique_cols = {}
+    if len(args) > 7:
+        unique_cols = args[7]
     ret = False
     try:
-        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time)
+        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time, generate_features=generate_features, unique_cols=unique_cols)
         if df is not None:
             ret = True
     except Exception as e:
@@ -1181,8 +1192,8 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     if df is None:
         return all_dfs
     df_tmp = df
+    # don't do this if we are predicting, this is a hack
     if "predict" not in prefix:
-        # we'll need to change this for runway arrival
         df[learned_class_name] = df[actual_class] - df[scheduled_class]
         df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         # we have to have learned_class_name b/c it is the target so reduce set to
@@ -1225,6 +1236,15 @@ if __name__ == '__main__':
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
     test_data_rev_prefix = 'PublicLeaderboardSet'
     kind = sys.argv[1]
+    if len(sys.argv) > 2:
+        learned_class_name = sys.argv[2]
+    if len(sys.argv) > 3:
+        scheduled_class = sys.argv[3]
+    if len(sys.argv) > 4:
+        actual_class = sys.argv[4]
+    sample_size = None
+    if len(sys.argv) > 5:
+        sample_size = int(sys.argv[5])
     if kind == "build_multi":
         pool_queue = []
         pool = Pool(processes=4)
@@ -1234,6 +1254,18 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
+        results = pool.map(get_joined_data_proxy, pool_queue, 1)
+        pool.terminate()
+    if kind == "build_multi_features":
+        unique_columns = pickle.load(open("unique_columns.p",'rb'))
+        pool_queue = []
+        pool = Pool(processes=4)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, True, unique_columns])
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, True, unique_columns])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":
@@ -1269,25 +1301,19 @@ if __name__ == '__main__':
             results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "concat":
-        sample_size = None
-        if len(sys.argv) > 2:
-            sample_size = int(sys.argv[2])
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size)
-        write_dataframe("all_joined", all_dfs, store)
+        write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
             all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, include_df=include_df, prefix="predict_")
-        write_dataframe("predict_all_joined", all_dfs, store)
+        write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_cross_validate":
-        sample_size = None
-        if len(sys.argv) > 2:
-            sample_size = int(sys.argv[2])
         train_all_df = read_dataframe("all_joined", store)
         all_dfs = None
         for i in xrange(5):
@@ -1295,32 +1321,32 @@ if __name__ == '__main__':
                 all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-            write_dataframe("cv_all_joined_{0}".format(i), all_dfs, store)
+            write_dataframe("cv_all_joined_{0}_{1}".format(learned_class_name, i), all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
-        all_df = read_dataframe("all_joined", store)
+        all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
-        all_df.to_csv("features.csv")
-        store = pd.HDFStore('features.h5')
-        write_dataframe("features", all_df, store)
+        all_df.to_csv("features_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
+        write_dataframe("features_{0}".format(learned_class_name), all_df, store)
     elif kind == "generate_features_predict":
         unique_cols = {}
-        all_df = read_dataframe("predict_all_joined", store)
+        all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
-        all_df.to_csv("predict_features.csv")
-        store = pd.HDFStore('predict_features.h5')
-        write_dataframe("predict_features", all_df, store)
+        all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('predict_features_{0}.h5'.format(learned_class_name))
+        write_dataframe("predict_features_{0}".format(learned_class_name), all_df, store)
     elif kind == "generate_features_cross_validate":
         unique_cols = {}
         for i in xrange(5):
-            all_df = read_dataframe("cv_all_joined_{0}".format(i), store)
+            all_df = read_dataframe("cv_all_joined_{0}_{1}".format(learned_class_name,i), store)
             unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
             all_df = process_into_features(all_df, unique_cols)
-            all_df.to_csv("cv_features_{0}.csv".format(i))
-            store = pd.HDFStore('cv_features_{0}.h5'.format(i))
-            write_dataframe("cv_features_{0}".format(i), all_df, store)
+            all_df.to_csv("cv_features_{0}_{1}.csv".format(learned_class_name,i))
+            store = pd.HDFStore('cv_features_{0}_{1}.h5'.format(learned_class_name, i))
+            write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_df, store)
     elif kind == "uniques":
         unique_cols = {}
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
@@ -1338,16 +1364,16 @@ if __name__ == '__main__':
         # assumes model already learned
         print "reading training features from store"
         try:
-            all_df = read_dataframe("features", store)
+            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
         except Exception as e:
-            all_df = pd.read_csv("features.csv", index_col=0)
+            all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
         # load the model
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
         for i in xrange(5):
             try:
-                test_all_df = read_dataframe("cv_features_{0}".format(i), store)
+                test_all_df = read_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), store)
             except Exception as e:
-                test_all_df = pd.read_csv("cv_features_{0}.csv".format(i), index_col=0)
+                test_all_df = pd.read_csv("cv_features_{0}_{1}.csv".format(learned_class_name, i), index_col=0)
             # This should normalize the features used for learning columns with the features used for predicting
             for column in all_df.columns:
                 if column not in test_all_df.columns:
@@ -1364,7 +1390,7 @@ if __name__ == '__main__':
     elif kind == "learn":
         print "reading features from store"
         try:
-            all_df = read_dataframe("features", store)
+            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
         except Exception as e:
             all_df = pd.read_csv("features.csv", index_col=0)
         for i, (column, series) in enumerate(all_df.iteritems()):
@@ -1389,9 +1415,9 @@ if __name__ == '__main__':
         print cfr.classes_[0]
         cfr.set_params(n_jobs=1)
         try:
-            test_all_df = read_dataframe("predict_features", store)
+            test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
         except Exception as e:
-            test_all_df = pd.read_csv("predict_features.csv", index_col=0)
+            test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
         for i, (column, series) in enumerate(test_all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)
@@ -1399,9 +1425,9 @@ if __name__ == '__main__':
                     print "is all nan and not 0:  {0}".format(len(series.dropna()))
                 del test_all_df[column]
         try:
-            all_df = read_dataframe("features", store)
+            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
         except Exception as e:
-            all_df = pd.read_csv("features.csv", index_col=0)
+            all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
         for i, (column, series) in enumerate(all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)

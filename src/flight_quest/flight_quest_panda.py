@@ -1094,7 +1094,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
 
 def get_expectations(cfr, features):
     p = cfr.predict_proba(features)
-    unique_classes = sorted(cfr.classes_)
+    unique_classes = sorted(cfr.classes_[0])
     expectations = []
     for k, probs in enumerate(p):
         print "len(prob)", len(probs)
@@ -1386,7 +1386,7 @@ if __name__ == '__main__':
     elif kind == "predict":
         print "reading features from store"
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
-        print cfr
+        print cfr.classes_[0]
         cfr.set_params(n_jobs=1)
         try:
             test_all_df = read_dataframe("predict_features", store)

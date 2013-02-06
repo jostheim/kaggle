@@ -8,6 +8,7 @@ import numpy as np
 import types
 import dateutil
 import datetime
+from dateutil import tz
 from multiprocessing import Pool
 import os, sys
 import random
@@ -898,43 +899,44 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
         try:
             df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
-            return df
         except Exception as e:
             print e
-    print "Working on {0}".format(date_prefix)
-    df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    asdi_disposition = get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
-    joiners = [events, asdi_disposition, asdi_merged]
-    df = df.join(joiners)
-    print "joined events and asdi"
-    per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    for per_flight in per_flights:
-        if per_flight is not None:
-            df = df.join(per_flight)
-    print "joined atscc"
-#        joiners = per_flights
-#        df = df.join(joiners)
-    metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-    df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
-    df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
-    print "joined metar"
-#        fbwind_arrival = get_fbwind("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-#        fbwind_departure = get_fbwind("departure", data_prefix, data_rev_prefix, date_prefix,, cutoff_time=cutoff_time)
-#        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-#        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
-#        taf_arrival = get_taf("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-#        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
-#        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
-#        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
-    print "column type counts: {0}".format(df.get_dtype_counts())
-    try:
-        write_dataframe("{0}joined_{1}".format(prefix, date_prefix), df, store)
-    except Exception as e:
-        print e
-        print traceback.format_exc()
+            return None
+    if df is None:
+        print "Working on {0}".format(date_prefix)
+        df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        asdi_disposition = get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
+        joiners = [events, asdi_disposition, asdi_merged]
+        df = df.join(joiners)
+        print "joined events and asdi"
+        per_flights = get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        for per_flight in per_flights:
+            if per_flight is not None:
+                df = df.join(per_flight)
+        print "joined atscc"
+    #        joiners = per_flights
+    #        df = df.join(joiners)
+        metar_arrival = get_metar("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        metar_departure = get_metar("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+        df = pd.merge(df, metar_arrival, how="left", left_on="arrival_airport_icao_code", right_index=True)
+        df = pd.merge(df, metar_departure, how="left", left_on="departure_airport_icao_code", right_index=True)
+        print "joined metar"
+    #        fbwind_arrival = get_fbwind("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    #        fbwind_departure = get_fbwind("departure", data_prefix, data_rev_prefix, date_prefix,, cutoff_time=cutoff_time)
+    #        df = pd.merge(df, fbwind_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+    #        df = pd.merge(df, fbwind_departure, how="left", left_on="departure_airport_code", right_index=True)
+    #        taf_arrival = get_taf("arrival", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    #        df = pd.merge(df, taf_arrival, how="left", left_on="arrival_airport_code", right_index=True)
+    #        taf_departure = get_taf("departure", data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
+    #        df = pd.merge(df, taf_departure, how="left", left_on="departure_airport_code", right_index=True)
+        print "column type counts: {0}".format(df.get_dtype_counts())
+        try:
+            write_dataframe("{0}joined_{1}".format(prefix, date_prefix), df, store)
+        except Exception as e:
+            print e
+            print traceback.format_exc()
     
     if generate_features:
         features_df = process_into_features(df, unique_cols)
@@ -1103,16 +1105,18 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
                 print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
 
-def get_expectations(cfr, features):
+def get_predictions(cfr, features):
+    max_prob = []
     predicted = cfr.predict(features)
     p = cfr.predict_proba(features)
     unique_classes = sorted(cfr.classes_[0])
     expectations = []
-    for k, feature in enumerate(features):
+    for k, (ix, row) in enumerate(features.iterrows()):
         expectation = np.sum(unique_classes*p[k])
-        expectations.append(expectation)
+        expectations.append({'flight_history_id':ix, '{0}_expectation'.format(learned_class_name):expectation})
+        max_prob.append({'flight_history_id':ix, '{0}_max_prob'.format(learned_class_name):predicted[k]})
         print expectation, predicted[k]
-    return expectations
+    return expectations, max_prob
 
 def get_metric(cfr, features, targets):
     sum_diff = 0.0
@@ -1348,6 +1352,7 @@ if __name__ == '__main__':
             store = pd.HDFStore('cv_features_{0}_{1}.h5'.format(learned_class_name, i))
             write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_df, store)
     elif kind == "uniques":
+        ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         unique_cols = {}
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
@@ -1406,14 +1411,15 @@ if __name__ == '__main__':
         features = all_df.ix[all_df[learned_class_name].dropna().index]
         # remove the target from the features
         del features[learned_class_name]
-        print features
         cfr = random_forest_learn(targets, features)
         pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
     elif kind == "predict":
         print "reading features from store"
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
         print cfr.classes_[0]
+        # n_jobs breaks this from the pickle
         cfr.set_params(n_jobs=1)
+        # read in the features to predict, remove bad columns
         try:
             test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
         except Exception as e:
@@ -1424,6 +1430,7 @@ if __name__ == '__main__':
                 if len(series.dropna()) > 0:
                     print "is all nan and not 0:  {0}".format(len(series.dropna()))
                 del test_all_df[column]
+        # read in the training features remove bad columns
         try:
             all_df = read_dataframe("features_{0}".format(learned_class_name), store)
         except Exception as e:
@@ -1448,8 +1455,39 @@ if __name__ == '__main__':
         for col in features_to_remove:
             if col in test_all_df.columns:
                 del test_all_df[col]
-        expectations = get_expectations(cfr, test_all_df)
-        
-
-
+        expectations, max_probs = get_predictions(cfr, test_all_df)
+        # create expectations df and output
+        expect_df = pd.DataFrame(expectations)
+        expect_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+        expect_df.to_csv('expecations_{0}.csv'.format(learned_class_name))
+        # create max_probability df and output
+        max_prob_df = pd.DataFrame(max_probs)
+        max_prob_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+        max_prob_df.to_csv('max_prob_{0}.csv'.format(learned_class_name))
+    elif kind == "finalize_output":
+        # load in the predictions
+        gate_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("gate_arrival_diff"), index_col=0)
+        runway_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("runway_arrival_diff"), index_col=0)
+        print "len(gate_arrival_expectations):{0} should equal len(runway_arrival_expectations) {1}".format(len(gate_arrival_expectations.index), len(runway_arrival_expectations.index))
+        # join them together
+        all_expectations = gate_arrival_expectations.join(runway_arrival_expectations)
+        # create new coumns for the values we want
+        all_expectations['actual_gate_arrival'] = np.nan
+        all_expectations['actual_runway_arrival'] = np.nan
+        # find out what day the fligh_history_ids are from, so we know midnight
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
+            midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
+            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+            # get the intersection of the ids in our expectations and the current df
+            intersection = all_expectations & df
+            # loop through teh intersection and compute minutes after midnight, store it in the columns we created
+            for ix, row in all_expectations.ix[intersection]:
+                #df[learned_class_name] = df[actual_class] - df[scheduled_class]
+                # so df[actual_class] = df[learned_class_name] + df[scheduled_class]
+                row['actual_gate_arrival'] = minutes_difference(df.ix[ix]['scheduled_gate_arrival'], midnight_time) + row['gate_arrival_diff_expectation']
+                row['actual_runway_arrival'] = minutes_difference(df.ix[ix]['scheduled_runway_arrival'], midnight_time) + row['runway_arrival_diff_expectation']
+        # output the final format
+        all_expectations.to_csv("expectations_solution_combined.csv", cols= ['actual_gate_arrival', 'actual_runway_arrival'], index_label="flight_history_id",)
         

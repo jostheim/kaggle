@@ -899,6 +899,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
         try:
             df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
             if len(df.index) == 0:
+                print "bad file {0}".format("{0}joined_{1}".format(prefix, date_prefix))
                 df = None
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
         except Exception as e:

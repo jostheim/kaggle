@@ -1077,15 +1077,18 @@ def process_into_features(df, unique_cols):
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))
     results = pool.map(process_column_into_features_proxy, pool_queue, 100)
+    pool.terminate()
+    df_dict = df.to_dict("series")
     for i,result in enumerate(results):
         if i%100 == 0:
             print "Finalizing {0}/{1}".format(i, len(results))
         columns, columns_to_delete = result
         for column in columns.keys():
-            df[column] = columns[column]
+            df_dict[column] = columns[column]
         for column in columns_to_delete:
-            del df[column]
-    pool.terminate()
+            del df_dict[column]
+    df = pd.DataFrame(df_dict)
+    print df
     
     # join all the bag_o_words columns we found
 #    bag_o_words_df = pd.DataFrame(bag_o_words.values())

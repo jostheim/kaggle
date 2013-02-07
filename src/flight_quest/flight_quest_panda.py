@@ -985,33 +985,35 @@ def minutes_difference(datetime1, datetime2):
     return diff.days*24*60+diff.seconds/60
 
 def process_column_into_features_proxy(args):
-    df = args[0]
-    unique_cols = args[1]
-    column = args[2]
-    series = args[3]
-    return process_column_into_features(df, unique_cols, column, series)
+    unique_cols = args[0]
+    column = args[1]
+    series = args[2]
+    scheduled_gate_arrival = args[3]
+    scheduled_runway_arrival = args[4] 
+    scheduled_runway_departure = args[5]
+    return process_column_into_features(unique_cols, column, series, scheduled_gate_arrival, scheduled_runway_arrival, scheduled_runway_departure)
 
-def process_column_into_features(df, unique_cols, column, series):
+def process_column_into_features(unique_cols, column, series, scheduled_gate_arrival, scheduled_runway_arrival, scheduled_runway_departure):
     try:
         columns = {}
         columns_to_delete = []
         #create diff columns for estimates
         if "estimated_gate_arrival" in column:
-            tmp = df[column] - df['scheduled_gate_arrival']
+            tmp = series - scheduled_gate_arrival
             columns["{0}_diff".format(column)] =  tmp.apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else np.nan) 
         if 'estimated_runway_arrival' in column:
-            tmp =  df[column] - df['scheduled_runway_arrival']
+            tmp =  series - scheduled_runway_arrival
             columns["{0}_diff".format(column)] = tmp.apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else np.nan)
         # I hate this, but I need to figure out the type and pandas has them as all objects
         dtype_tmp = get_column_type(series)
         if dtype_tmp is datetime.datetime:
             print "datetime column: ", column
-            columns['{0}_weekday'.format(column)] = df[column].apply(lambda x:x.weekday() if type(x) is datetime.datetime else np.nan)
-            columns['{0}_day'.format(column)] = df[column].apply(lambda x:x.day if type(x) is datetime.datetime else np.nan)
-            columns['{0}_hour'.format(column)] = df[column].apply(lambda x:x.hour if type(x) is datetime.datetime else np.nan)
-            columns['{0}_minute'.format(column)] = df[column].apply(lambda x:x.minute if type(x) is datetime.datetime else np.nan) # get the diff relative to a zero-point
-            columns['{0}_diff'.format(column)] = df['scheduled_runway_departure'] - series # set the diff to be in minutes
-            columns['{0}_diff'.format(column)] = df['{0}_diff'.format(column)].apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else np.nan)
+            columns['{0}_weekday'.format(column)] = series.apply(lambda x:x.weekday() if type(x) is datetime.datetime else np.nan)
+            columns['{0}_day'.format(column)] = series.apply(lambda x:x.day if type(x) is datetime.datetime else np.nan)
+            columns['{0}_hour'.format(column)] = series.apply(lambda x:x.hour if type(x) is datetime.datetime else np.nan)
+            columns['{0}_minute'.format(column)] = series.apply(lambda x:x.minute if type(x) is datetime.datetime else np.nan) # get the diff relative to a zero-point
+            columns['{0}_diff'.format(column)] = scheduled_runway_departure - series # set the diff to be in minutes
+            columns['{0}_diff'.format(column)] = columns['{0}_diff'.format(column)].apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else np.nan)
                 # delete the original
             if column != "scheduled_runway_departure" and column != "scheduled_gate_arrival" and column != "scheduled_runway_arrival":
                 columns_to_delete.append(column)
@@ -1039,9 +1041,9 @@ def process_column_into_features(df, unique_cols, column, series):
             #                            bag_o_words_columns_to_delete.append(column)
             #                else:
             if column in unique_cols:
-                columns[column] = df[column].apply(lambda x:unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
+                columns[column] = series.apply(lambda x:unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
         elif series.dtype is object or str(series.dtype) == "object":
-            print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column) #del df[column]
+            print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column) 
     except Exception as e:
         print e
         import traceback
@@ -1066,7 +1068,7 @@ def process_into_features(df, unique_cols):
         if len(series) == 0:
             print "Column {0} is entirely nan's".format(column)
             continue
-        pool_queue.append([df, unique_cols, column, series])
+        pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))
     results = pool.map(process_column_into_features_proxy, pool_queue, 100)

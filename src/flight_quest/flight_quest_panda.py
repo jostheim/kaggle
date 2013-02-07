@@ -1338,14 +1338,14 @@ if __name__ == '__main__':
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
-        write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
+        write_dataframe("features_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = None
         unique_columns = pickle.load(open("unique_columns.p",'rb'))
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
             all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, unique_columns, include_df=include_df, prefix="predict_")
-        write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
+        write_dataframe("predict_features_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_cross_validate":
         train_all_df = read_dataframe("all_joined", store)
         all_dfs = None
@@ -1355,7 +1355,7 @@ if __name__ == '__main__':
                 all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-            write_dataframe("cv_all_joined_{0}_{1}".format(learned_class_name, i), all_dfs, store)
+            write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
         all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)

@@ -1410,7 +1410,9 @@ if __name__ == '__main__':
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
 #            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue[0:3], 1)
+        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue, 1)
+        pickle.dump(results, open("uniques_backup.p", 'wb'))
+        pool.terminate()
         all_unique_cols = {}
         for unique_cols in results:
             # dict of column : list of values

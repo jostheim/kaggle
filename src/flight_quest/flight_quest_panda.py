@@ -1134,13 +1134,14 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
             if series.dtype == "object" and dtype_tmp is str:
                 us = np.unique(series, return_index=False, return_inverse=False)
 #                grouped = df.groupby(column)
-                for val in us:
+                if len(us) > 0:
                     if column not in unique_cols:
-                        print "adding "+column, dtype_tmp, series.dtype
-                        # add it to the unique cols map
-                        unique_cols[column] = [] # if we have not seen this val before
-                    if val not in unique_cols[column]: # append to the unqiue_cols for this column
-                        unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
+                            print "adding "+column, dtype_tmp, series.dtype
+                            # add it to the unique cols map
+                            unique_cols[column] = [] # if we have not seen this val before
+                    for val in us:
+                        if val not in unique_cols[column]: # append to the unqiue_cols for this column
+                            unique_cols[column].append(val) # index is what we want to record for svm (svm uses floats not categorical data (strings))
             else:
                 print "not uniquing {0} {1} {2}".format(column, dtype_tmp, series.dtype)
         return unique_cols
@@ -1410,7 +1411,7 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
 #            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
         results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue, 1)
         pickle.dump(results, open("uniques_backup.p", 'wb'))

@@ -898,10 +898,12 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     if "{0}joined_{1}".format(prefix, date_prefix) in store and not force: 
         try:
             df = read_dataframe("{0}joined_{1}".format(prefix, date_prefix), store)
+            if len(df.index) == 0:
+                df = None
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
         except Exception as e:
             print e
-            return None
+#            return None
     if df is None:
         print "Working on {0}".format(date_prefix)
         df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
@@ -997,6 +999,12 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
     try:
         columns = {}
         columns_to_delete = []
+        series = series.dropna()
+        if len(series.values) == 0:
+            print "Column {0} is entirely nan's, deleting".format(column)
+            return columns, columns_to_delete
+        # this fixes a mistake not setting something to np.nan when parsing
+        series = series.apply(lambda x: x if x != "MISSING" else np.nan)
         #create diff columns for estimates
         if "estimated_gate_arrival" in column:
             tmp = series - scheduled_gate_arrival
@@ -1064,13 +1072,6 @@ def process_into_features(df, unique_cols):
     pool = Pool(processes=8)
     pool_queue = []
     for i, (column, series) in enumerate(df.iteritems()):
-        series = series.dropna()
-        if len(series.values) == 0:
-            print "Column {0} is entirely nan's, deleting".format(column)
-            del df[column]
-            continue
-        # this fixes a mistake not setting something to np.nan when parsing
-        series = series.apply(lambda x: x if x != "MISSING" else np.nan)
         pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))

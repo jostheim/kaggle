@@ -1051,6 +1051,8 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
             #                else:
             if column in unique_cols:
                 columns[column] = series.apply(lambda x:unique_cols[column].index(x) if type(x) is str and x in unique_cols[column] and type(x) is not np.nan and str(x) != "nan" else np.nan)
+            else:
+                print "{0} was not in uniques".format(column)
         elif series.dtype is object or str(series.dtype) == "object":
             print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column) 
     except Exception as e:

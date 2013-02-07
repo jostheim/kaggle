@@ -1129,6 +1129,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
         return unique_columns
     except Exception as e:
         for i, (column, series) in enumerate(df.iteritems()):
+            series = series.dropna()
             dtype_tmp = get_column_type(series)
             if series.dtype == "object" and dtype_tmp is str:
                 grouped = df.groupby(column)

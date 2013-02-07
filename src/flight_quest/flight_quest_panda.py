@@ -1398,7 +1398,6 @@ if __name__ == '__main__':
             write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_df, store)
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
-        unique_cols = {}
         pool_queue = []
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
@@ -1411,7 +1410,7 @@ if __name__ == '__main__':
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
             pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
 #            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue[0:1], 1)
+        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue[0:3], 1)
         all_unique_cols = {}
         for unique_cols in results:
             # dict of column : list of values

@@ -1065,7 +1065,7 @@ def process_into_features(df, unique_cols):
     pool_queue = []
     for i, (column, series) in enumerate(df.iteritems()):
         series = series.dropna()
-        if len(series) == 0:
+        if len(series.values) == 0:
             print "Column {0} is entirely nan's, deleting".format(column)
             del df[column]
             continue

@@ -1074,6 +1074,7 @@ def process_into_features(df, unique_cols):
     print "extracting features for {0} columns".format(len(pool_queue))
     results = pool.map(process_column_into_features_proxy, pool_queue, 100)
     for result in results:
+        print result
         columns, columns_to_delete = result
         for column in columns.keys():
             df[column] = column[column]

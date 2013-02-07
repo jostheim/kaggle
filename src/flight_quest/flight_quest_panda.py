@@ -1077,7 +1077,7 @@ def process_into_features(df, unique_cols):
         del df["scheduled_gate_arrival"]
     if "scheduled_runway_arrival" in df.columns:
         del df["scheduled_runway_arrival"]
-    df = df.convert_objects()
+#    df = df.convert_objects()
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "After convert types {0} is still an object, is nans {1}".format(column, len(series.dropna()) == 0)

@@ -1114,6 +1114,15 @@ def process_into_features(df, unique_cols):
             #df[column] = df[column].astype(float)
     return df
 
+def get_unique_values_for_categorical_columns_proxy(args):
+    data_prefix = args[0]
+    data_rev_prefix = args[1]
+    subdirname = args[2]
+    store_filename = args[3]
+    df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
+    unique_cols = {}
+    return get_unique_values_for_categorical_columns(df, unique_cols)
+
 def get_unique_values_for_categorical_columns(df, unique_cols):
     try:
         unique_columns = pickle.load(open("unique_columns.p",'rb'))
@@ -1390,17 +1399,30 @@ if __name__ == '__main__':
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         unique_cols = {}
+        pool_queue = []
+        pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
-            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+#            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            df = get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
-            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-        pickle.dump(unique_cols, open("unique_columns.p", "wb"))
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+#            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
+        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue[0:1], 1)
+        all_unique_cols = {}
+        for unique_cols in results:
+            # dict of column : list of values
+            for col in unique_cols.keys():
+                unique_values = unique_cols[col]
+                if col not in all_unique_cols:
+                    all_unique_cols[col] = []
+                if len(unique_values) > 0:
+                    # concat
+                    all_unique_cols[col] = all_unique_cols[col] + unique_values 
+        pickle.dump(all_unique_cols, open("unique_columns.p", "wb"))
     elif kind == "cross_validate":
         # assumes model already learned
         print "reading training features from store"

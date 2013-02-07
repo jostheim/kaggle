@@ -1134,7 +1134,7 @@ def get_unique_values_for_categorical_columns(df, unique_cols):
             if series.dtype == "object" and dtype_tmp is str:
                 us = np.unique(series, return_index=False, return_inverse=False)
 #                grouped = df.groupby(column)
-                for u in us:
+                for val in us:
                     if column not in unique_cols:
                         print "adding "+column, dtype_tmp, series.dtype
                         # add it to the unique cols map

@@ -115,7 +115,7 @@ def read_dataframe(name, store, convert_dates_switch = True):
 def get_column_type(series):
     dtype_tmp = None
     for ix, type_val in series.dropna().iteritems():
-        if type_val is not np.nan and str(type_val) != "nan":
+        if type_val is not np.nan and str(type_val) != "nan" and type_val is not None:
             dtype_tmp = type(type_val)
             return dtype_tmp
 

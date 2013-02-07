@@ -1066,7 +1066,8 @@ def process_into_features(df, unique_cols):
     for i, (column, series) in enumerate(df.iteritems()):
         series = series.dropna()
         if len(series) == 0:
-            print "Column {0} is entirely nan's".format(column)
+            print "Column {0} is entirely nan's, deleting".format(column)
+            del df[column]
             continue
         # this fixes a mistake not setting something to np.nan when parsing
         series = series.apply(lambda x: x if x != "MISSING" else np.nan)
@@ -1075,7 +1076,6 @@ def process_into_features(df, unique_cols):
     print "extracting features for {0} columns".format(len(pool_queue))
     results = pool.map(process_column_into_features_proxy, pool_queue, 100)
     for result in results:
-        print result
         columns, columns_to_delete = result
         for column in columns.keys():
             df[column] = columns[column]
@@ -1096,12 +1096,12 @@ def process_into_features(df, unique_cols):
         del df["scheduled_gate_arrival"]
     if "scheduled_runway_arrival" in df.columns:
         del df["scheduled_runway_arrival"]
-#    df = df.convert_objects()
-#    for i, (column, series) in enumerate(df.iteritems()):
-#        if series.dtype is object or str(series.dtype) == "object":
-#            print "After convert types {0} is still an object, is nans {1}".format(column, len(series.dropna()) == 0)
-#            del df[column]
-#            #df[column] = df[column].astype(float)
+    df = df.convert_objects()
+    for i, (column, series) in enumerate(df.iteritems()):
+        if series.dtype is object or str(series.dtype) == "object":
+            print "After convert types {0} is still an object, is nans {1}, deleting".format(column, len(series.dropna()) == 0)
+            del df[column]
+            #df[column] = df[column].astype(float)
     return df
 
 def get_unique_values_for_categorical_columns(df, unique_cols):
@@ -1201,6 +1201,9 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, sample_size=None, 
     store_filename = 'flight_quest_{0}.h5'.format(subdirname)
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename, prefix=prefix)
+        df = process_into_features(df, unique_cols)
+        print df
+        df = df.to_sparse()
         before_count = len(df.index)
         if exclude_df is not None:
             keep_index = df.index - exclude_df.index

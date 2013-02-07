@@ -510,8 +510,8 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
     if cutoff_time is not None:
         events_df = events_df[events_df['date_time_recorded'] < cutoff_time]
     cast_date_columns(events_df, flight_history_events_date_cols)
-    events_df["estimated_gate_arrival"] = "MISSING"
-    events_df["estimated_runway_arrival"] = "MISSING"
+    events_df["estimated_gate_arrival"] = np.nan
+    events_df["estimated_runway_arrival"] = np.nan
     
     for ix, row in events_df.iterrows():
         if ix not in flight_history_df.index:
@@ -1068,6 +1068,7 @@ def process_into_features(df, unique_cols):
         if len(series) == 0:
             print "Column {0} is entirely nan's".format(column)
             continue
+        series = series.apply(lambda x: x if x != "MISSING" else np.nan)
         pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))

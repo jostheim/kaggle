@@ -1107,6 +1107,7 @@ def process_into_features(df, unique_cols):
     for i, (column, series) in enumerate(df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "After convert types {0} is still an object, is nans {1}, deleting".format(column, len(series.dropna()) == 0)
+            print series.dropna().values
             del df[column]
             #df[column] = df[column].astype(float)
     return df

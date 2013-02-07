@@ -1068,6 +1068,7 @@ def process_into_features(df, unique_cols):
         if len(series) == 0:
             print "Column {0} is entirely nan's".format(column)
             continue
+        # this fixes a mistake not setting something to np.nan when parsing
         series = series.apply(lambda x: x if x != "MISSING" else np.nan)
         pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
@@ -1077,7 +1078,7 @@ def process_into_features(df, unique_cols):
         print result
         columns, columns_to_delete = result
         for column in columns.keys():
-            df[column] = column[column]
+            df[column] = columns[column]
         for column in columns_to_delete:
             del df[column]
     pool.terminate()

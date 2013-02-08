@@ -1223,6 +1223,10 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
     store_filename = 'flight_quest_{0}.h5'.format(subdirname)
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename, prefix=prefix)
+        # don't do this if we are predicting, this is a hack
+        if "predict" not in prefix:
+            df[learned_class_name] = df[actual_class] - df[scheduled_class]
+            df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
         print "processing into features"
         df = process_into_features(df, unique_cols)
         print df
@@ -1240,14 +1244,9 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         return all_dfs
     if df is None:
         return all_dfs
-    df_tmp = df
-    # don't do this if we are predicting, this is a hack
-    if "predict" not in prefix:
-        df[learned_class_name] = df[actual_class] - df[scheduled_class]
-        df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-        # we have to have learned_class_name b/c it is the target so reduce set to
-        # non-nan values
-        df_tmp = df.ix[df[learned_class_name].dropna().index]
+    # we have to have learned_class_name b/c it is the target so reduce set to
+    # non-nan values
+    df_tmp = df.ix[df[learned_class_name].dropna().index]
     if sample_size is not None:
         samples = sample_size
         rows = random.sample(df_tmp.index, samples)
@@ -1260,7 +1259,6 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         all_dfs.drop_duplicates(take_last=True, inplace=True)
     df = None
     df_tmp = None
-    test_df = None
     return all_dfs
 
 def rebin_targets(targets, nbins):

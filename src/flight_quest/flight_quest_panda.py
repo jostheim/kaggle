@@ -1004,8 +1004,6 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         if len(series.values) == 0:
 #            print "Column {0} is entirely nan's, deleting".format(column)
             return columns, columns_to_delete
-        # this fixes a mistake not setting something to np.nan when parsing
-        series = series.apply(lambda x: x if x != "MISSING" else np.nan)
         #create diff columns for estimates
         if "estimated_gate_arrival" in column:
             tmp = series - scheduled_gate_arrival
@@ -1075,6 +1073,9 @@ def process_into_features(df, unique_cols):
     pool = Pool(processes=8)
     pool_queue = []
     for i, (column, series) in enumerate(df.iteritems()):
+        if "estimated_gate_arrival" in column or "estimated_runway_arrival" in column:
+            # this fixes a mistake not setting something to np.nan when parsing
+            df[column] = series.apply(lambda x: x if x != "MISSING" else np.nan)
         pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))

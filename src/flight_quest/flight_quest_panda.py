@@ -1054,6 +1054,7 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         elif series.dtype is object or str(series.dtype) == "object":
             print "Column {0} is not a datetime and not a string, but is an object according to pandas".format(column) 
     except Exception as e:
+        print "Error on column: {0}".format(column)
         print e
         import traceback
         print traceback.format_exc()
@@ -1075,7 +1076,7 @@ def process_into_features(df, unique_cols):
     for i, (column, series) in enumerate(df.iteritems()):
         if "estimated_gate_arrival" in column or "estimated_runway_arrival" in column:
             # this fixes a mistake not setting something to np.nan when parsing
-            df[column] = series.apply(lambda x: x if x != "MISSING" else np.nan)
+            df[column] = series.apply(lambda x: x if type(x) is datetime.datetime else np.nan)
         pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))

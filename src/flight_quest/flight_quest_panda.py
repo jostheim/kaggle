@@ -1242,7 +1242,6 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         print "processing into features"
         df = process_into_features(df, unique_cols)
         print df
-        df = df.to_sparse()
         before_count = len(df.index)
         if exclude_df is not None:
             keep_index = df.index - exclude_df.index

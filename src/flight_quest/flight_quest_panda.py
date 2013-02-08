@@ -1094,7 +1094,7 @@ def process_into_features(df, unique_cols):
         for column in columns_to_delete:
             del df_dict[column]
     df = pd.DataFrame(df_dict)
-    print df
+    print "recreated df after feature processing: ", df
     
     # join all the bag_o_words columns we found
 #    bag_o_words_df = pd.DataFrame(bag_o_words.values())
@@ -1241,7 +1241,7 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         df = df_tmp
         print "processing into features"
         df = process_into_features(df, unique_cols)
-        print df
+        print "features df after all processing: ", df
         before_count = len(df.index)
         if exclude_df is not None:
             keep_index = df.index - exclude_df.index
@@ -1258,7 +1258,6 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
     if all_dfs is None:
         all_dfs = df
     else:
-        print df_tmp
         all_dfs = all_dfs.append(df)
         all_dfs.drop_duplicates(take_last=True, inplace=True)
     df = None

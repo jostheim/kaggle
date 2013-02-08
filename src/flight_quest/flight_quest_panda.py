@@ -1230,6 +1230,14 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         if "predict" not in prefix:
             df[learned_class_name] = df[actual_class] - df[scheduled_class]
             df[learned_class_name] =  df[learned_class_name].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
+        # we have to have learned_class_name b/c it is the target so reduce set to
+        # non-nan values
+        df_tmp = df.ix[df[learned_class_name].dropna().index]
+        if sample_size is not None:
+            samples = sample_size
+            rows = random.sample(df_tmp.index, samples)
+            df_tmp = df_tmp.ix[rows]
+        df = df_tmp
         print "processing into features"
         df = process_into_features(df, unique_cols)
         print df
@@ -1247,18 +1255,11 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         return all_dfs
     if df is None:
         return all_dfs
-    # we have to have learned_class_name b/c it is the target so reduce set to
-    # non-nan values
-    df_tmp = df.ix[df[learned_class_name].dropna().index]
-    if sample_size is not None:
-        samples = sample_size
-        rows = random.sample(df_tmp.index, samples)
-        df_tmp = df_tmp.ix[rows]
     if all_dfs is None:
-        all_dfs = df_tmp
+        all_dfs = df
     else:
         print df_tmp
-        all_dfs = all_dfs.append(df_tmp)
+        all_dfs = all_dfs.append(df)
         all_dfs.drop_duplicates(take_last=True, inplace=True)
     df = None
     df_tmp = None

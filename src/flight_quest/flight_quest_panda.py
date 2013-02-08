@@ -1002,7 +1002,7 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         columns_to_delete = []
         series = series.dropna()
         if len(series.values) == 0:
-            print "Column {0} is entirely nan's, deleting".format(column)
+#            print "Column {0} is entirely nan's, deleting".format(column)
             return columns, columns_to_delete
         # this fixes a mistake not setting something to np.nan when parsing
         series = series.apply(lambda x: x if x != "MISSING" else np.nan)
@@ -1016,7 +1016,7 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         # I hate this, but I need to figure out the type and pandas has them as all objects
         dtype_tmp = get_column_type(series)
         if dtype_tmp is datetime.datetime:
-            print "datetime column: ", column
+#            print "datetime column: ", column
             columns['{0}_weekday'.format(column)] = series.apply(lambda x:x.weekday() if type(x) is datetime.datetime else np.nan)
             columns['{0}_day'.format(column)] = series.apply(lambda x:x.day if type(x) is datetime.datetime else np.nan)
             columns['{0}_hour'.format(column)] = series.apply(lambda x:x.hour if type(x) is datetime.datetime else np.nan)
@@ -1027,7 +1027,7 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
             if column != "scheduled_runway_departure" and column != "scheduled_gate_arrival" and column != "scheduled_runway_arrival":
                 columns_to_delete.append(column)
         elif dtype_tmp is str:
-            print column
+#            print column
             # this part is if we end up with a text column, break it up into bag of words
             #                for ix_b, val in series.iteritems():
             #                    if val is np.nan or str(val) == "nan" or type(val) is not str:

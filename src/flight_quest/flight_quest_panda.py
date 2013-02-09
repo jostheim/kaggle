@@ -942,6 +942,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
             print traceback.format_exc()
     
     if generate_features:
+        print "generating features"
         features_df = process_into_features(df, unique_cols, mulit=False)
         features_df.to_csv("{0}features_{1}.csv".format(prefix, date_prefix))
     
@@ -1317,10 +1318,10 @@ if __name__ == '__main__':
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, True, unique_columns])
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, None, True, unique_columns])
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, True, unique_columns])
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, None, True, unique_columns])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":

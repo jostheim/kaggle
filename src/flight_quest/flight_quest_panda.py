@@ -1087,8 +1087,8 @@ def process_into_features(df, unique_cols, multi=True):
         else:
             results.append(process_column_into_features(unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']))
 #        columns, columns_to_delete = process_column_into_features()
-    print "extracting features for {0} columns".format(len(pool_queue))
     if multi:
+        print "extracting features for {0} columns".format(len(pool_queue))
         results = pool.map(process_column_into_features_proxy, pool_queue, len(pool_queue)/8)
         pool.terminate()
     df_dict = df.to_dict("series")

@@ -1092,7 +1092,7 @@ def process_into_features(df, unique_cols, multi=True):
         results = pool.map(process_column_into_features_proxy, pool_queue, len(pool_queue)/8)
         pool.terminate()
     df_dict = df.to_dict("series")
-    fac = int(len(pool_queue)/10)
+    fac = int(len(results)/10)
     for i,result in enumerate(results):
         if i%fac == 0:
             print "Finalizing {0}/{1}".format(i, len(results))

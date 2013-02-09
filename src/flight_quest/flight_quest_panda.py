@@ -971,7 +971,7 @@ def get_joined_data_proxy(args):
     unique_cols = {}
     if len(args) > 7:
         unique_cols = args[7]
-    print "date_prefix", date_prefix, "data_rev_prefix", data_rev_prefix, "date_prefix", date_prefix, "store_filename", store_filename, "prefix", prefix, "cutoff_time", cutoff_time, "generate_features", generate_features, "unique_cols", unique_cols
+    print "date_prefix", date_prefix, "data_rev_prefix", data_rev_prefix, "date_prefix", date_prefix, "store_filename", store_filename, "prefix", prefix, "cutoff_time", cutoff_time, "generate_features", generate_features
     ret = False
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time, generate_features=generate_features, unique_cols=unique_cols)

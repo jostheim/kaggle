@@ -971,6 +971,7 @@ def get_joined_data_proxy(args):
     unique_cols = {}
     if len(args) > 7:
         unique_cols = args[7]
+    print "date_prefix", date_prefix, "data_rev_prefix", data_rev_prefix, "date_prefix", date_prefix, "store_filename", store_filename, "prefix", prefix, "cutoff_time", cutoff_time, "generate_features", generate_features, "unique_cols", unique_cols
     ret = False
     try:
         df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time, generate_features=generate_features, unique_cols=unique_cols)
@@ -1318,10 +1319,10 @@ if __name__ == '__main__':
         pool = Pool(processes=4)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, None, True, unique_columns])
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None,  True, unique_columns])
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, None, True, unique_columns])
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":

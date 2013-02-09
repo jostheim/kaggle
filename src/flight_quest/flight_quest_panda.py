@@ -943,7 +943,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     
     if generate_features:
         print "generating features"
-        features_df = process_into_features(df, unique_cols, mulit=False)
+        features_df = process_into_features(df, unique_cols, multi=False)
         features_df.to_csv("{0}features_{1}.csv".format(prefix, date_prefix))
     
     try:

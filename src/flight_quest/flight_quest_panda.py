@@ -942,7 +942,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
             print traceback.format_exc()
     
     if generate_features:
-        features_df = process_into_features(df, unique_cols)
+        features_df = process_into_features(df, unique_cols, mulit=False)
         features_df.to_csv("{0}features_{1}.csv".format(prefix, date_prefix))
     
     try:
@@ -1060,7 +1060,7 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         print traceback.format_exc()
     return columns, columns_to_delete
 
-def process_into_features(df, unique_cols):
+def process_into_features(df, unique_cols, multi=True):
     df['gate_arrival_diff'] = df['actual_gate_arrival'] - df['scheduled_gate_arrival']
     df['gate_arrival_diff'] =  df['gate_arrival_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     df['runway_arrival_diff'] = df['actual_runway_arrival'] - df['scheduled_runway_arrival']
@@ -1071,18 +1071,23 @@ def process_into_features(df, unique_cols):
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
 #    bag_o_words = {}
 #    bag_o_words_columns_to_delete = []
-    pool = Pool(processes=8)
+    pool = Pool(processes=4)
     pool_queue = []
+    results = []
     for i, (column, series) in enumerate(df.iteritems()):
         if "estimated_gate_arrival" in column or "estimated_runway_arrival" in column:
             # this fixes a mistake not setting something to np.nan when parsing
             df[column] = series.apply(lambda x: x if type(x) is datetime.datetime else np.nan)
             series = df[column]
-        pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
+        if multi:
+            pool_queue.append([unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']])
+        else:
+            results.append(process_column_into_features(unique_cols, column, series, df['scheduled_gate_arrival'], df['scheduled_runway_arrival'], df['scheduled_runway_departure']))
 #        columns, columns_to_delete = process_column_into_features()
     print "extracting features for {0} columns".format(len(pool_queue))
-    results = pool.map(process_column_into_features_proxy, pool_queue, len(pool_queue)/8)
-    pool.terminate()
+    if multi:
+        results = pool.map(process_column_into_features_proxy, pool_queue, len(pool_queue)/8)
+        pool.terminate()
     df_dict = df.to_dict("series")
     fac = int(len(pool_queue)/10)
     for i,result in enumerate(results):
@@ -1357,6 +1362,8 @@ if __name__ == '__main__':
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
+        all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
         write_dataframe("features_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_predict":
         all_dfs = None
@@ -1364,7 +1371,9 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
             all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, unique_columns, include_df=include_df, prefix="predict_")
-        write_dataframe("predict_features_{0}".format(learned_class_name), all_dfs, store)
+        all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
+        write_dataframe("features_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_cross_validate":
         train_all_df = read_dataframe("all_joined", store)
         all_dfs = None
@@ -1374,7 +1383,9 @@ if __name__ == '__main__':
                 all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
             for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
                 all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-            write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_dfs, store)
+            all_dfs.to_csv("cv_features_{0}_{1}.csv".format(learned_class_name))
+            store = pd.HDFStore('cv_features_{0}_{1}.h5'.format(learned_class_name))
+            write_dataframe("cv_features_{0}_{1}".format(learned_class_name), all_dfs, store)
     elif kind == "generate_features":
         unique_cols = {}
         all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)

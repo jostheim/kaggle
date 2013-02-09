@@ -1073,8 +1073,9 @@ def process_into_features(df, unique_cols, multi=True):
     df['runway_departure_diff'] = df['runway_departure_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
 #    bag_o_words = {}
 #    bag_o_words_columns_to_delete = []
-    pool = Pool(processes=4)
-    pool_queue = []
+    if multi:
+        pool = Pool(processes=4)
+        pool_queue = []
     results = []
     for i, (column, series) in enumerate(df.iteritems()):
         if "estimated_gate_arrival" in column or "estimated_runway_arrival" in column:

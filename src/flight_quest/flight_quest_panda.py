@@ -1317,13 +1317,15 @@ if __name__ == '__main__':
     if kind == "build_multi_features":
         unique_columns = pickle.load(open("unique_columns.p",'rb'))
         pool_queue = []
-        pool = Pool(processes=4)
+        pool = Pool(processes=2)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None,  True, unique_columns])
+            if not os.path.exists("{0}features_{1}.csv"):
+                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None,  True, unique_columns])
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
+            if not os.path.exists("{0}features_{1}.csv"):
+                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+                pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
     elif kind == "build":

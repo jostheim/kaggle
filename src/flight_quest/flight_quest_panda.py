@@ -1319,11 +1319,11 @@ if __name__ == '__main__':
         pool_queue = []
         pool = Pool(processes=2)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            if not os.path.exists("{0}features_{1}.csv"):
+            if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
                 pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None,  True, unique_columns])
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            if not os.path.exists("{0}features_{1}.csv"):
+            if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
                 store_filename = 'flight_quest_{0}.h5'.format(subdirname)
                 pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)

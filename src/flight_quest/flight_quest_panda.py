@@ -1270,8 +1270,6 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
         all_dfs = all_dfs.append(df)
         all_dfs.drop_duplicates(take_last=True, inplace=True)
         print all_dfs
-    df = None
-    df_tmp = None
     return all_dfs
 
 def rebin_targets(targets, nbins):

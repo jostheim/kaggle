@@ -1407,12 +1407,14 @@ if __name__ == '__main__':
                 all_dfs = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
             else:
                 all_dfs.append(pd.read_csv("{0}features_{1}.csv".format("", subdirname)))
+            print "new length {0}".format(len(all_dfs.index))
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             if all_dfs is None:
                 all_dfs = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
             else:
                 all_dfs.append(pd.read_csv("{0}features_{1}.csv".format("", subdirname)))
+            print "new length {0}".format(len(all_dfs.index))
         all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
     elif kind == "concat_predict":
         all_dfs = None

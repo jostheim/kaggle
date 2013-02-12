@@ -1247,18 +1247,18 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
             rows = random.sample(df_tmp.index, samples)
             df_tmp = df_tmp.ix[rows]
         df = df_tmp
-        print "processing into features"
-        df = process_into_features(df, unique_cols)
-        print "features df after all processing: ", df
-        before_count = len(df.index)
-        if exclude_df is not None:
-            keep_index = df.index - exclude_df.index
-            df = df.ix[keep_index]
-            print "Number before excluding features: {0} and after: {1}".format(before_count, len(df.index))
-        before_count = len(df.index)
-        if include_df is not None:
-            df = df.ix[include_df.index & df.index]
-            print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
+#        print "processing into features"
+#        df = process_into_features(df, unique_cols)
+#        print "features df after all processing: ", df
+#        before_count = len(df.index)
+#        if exclude_df is not None:
+#            keep_index = df.index - exclude_df.index
+#            df = df.ix[keep_index]
+#            print "Number before excluding features: {0} and after: {1}".format(before_count, len(df.index))
+#        before_count = len(df.index)
+#        if include_df is not None:
+#            df = df.ix[include_df.index & df.index]
+#            print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
     except Exception as e:
         return all_dfs
     if df is None:
@@ -1285,6 +1285,35 @@ def rebin_targets(targets, nbins):
         else:
             new_bins.append((bins[digit-1] + bins[digit])/2.0)
     return new_bins
+
+def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
+    pool_queue = []
+    pool = Pool(processes=4)
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename]) #            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
+    
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename]) #            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
+    
+    results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue, 1)
+    pickle.dump(results, open("uniques_backup.p", 'wb'))
+    pool.terminate()
+    all_unique_cols = {}
+    for unique_cols in results:
+    # dict of column : list of values
+        for col in unique_cols.keys():
+            unique_values = unique_cols[col]
+            if col not in all_unique_cols:
+                all_unique_cols[col] = []
+            if len(unique_values) > 0: # concat
+                all_unique_cols[col] = all_unique_cols[col] + unique_values
+    
+    pickle.dump(all_unique_cols, open("unique_columns.p", "wb"))
+
 
 if __name__ == '__main__':
     store = pd.HDFStore('flight_quest.h5')
@@ -1412,7 +1441,7 @@ if __name__ == '__main__':
                 all_dfs = df_tmp 
             else:
                 all_dfs = all_dfs.append(df_tmp)
-            print "new length {0}".format(len(all_dfs.index))
+            print "new length {0}".format(all_dfs)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             print "Working on {0}".format(subdirname)
             df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
@@ -1424,7 +1453,7 @@ if __name__ == '__main__':
                 all_dfs = pd.read_csv(df_tmp)
             else:
                 all_dfs = all_dfs.append(df_tmp)
-            print "new length {0}".format(len(all_dfs.index))
+            print "new length {0}".format(all_dfs)
         all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
     elif kind == "concat_predict":
         all_dfs = None
@@ -1474,59 +1503,47 @@ if __name__ == '__main__':
             write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_df, store)
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
-        pool_queue = []
-        pool = Pool(processes=4)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
-#            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
-#            unique_cols = get_unique_values_for_categorical_columns(df, unique_cols)
-        results = pool.map(get_unique_values_for_categorical_columns_proxy, pool_queue, 1)
-        pickle.dump(results, open("uniques_backup.p", 'wb'))
-        pool.terminate()
-        all_unique_cols = {}
-        for unique_cols in results:
-            # dict of column : list of values
-            for col in unique_cols.keys():
-                unique_values = unique_cols[col]
-                if col not in all_unique_cols:
-                    all_unique_cols[col] = []
-                if len(unique_values) > 0:
-                    # concat
-                    all_unique_cols[col] = all_unique_cols[col] + unique_values 
-        pickle.dump(all_unique_cols, open("unique_columns.p", "wb"))
+        build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "cross_validate":
         # assumes model already learned
         print "reading training features from store"
+        test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2,3,4], date_parser=parse_date_time)
+        # we need the features we trained from, in order to normalize the columns
         try:
             all_df = read_dataframe("features_{0}".format(learned_class_name), store)
         except Exception as e:
             all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
         # load the model
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
-        for i in xrange(5):
-            try:
-                test_all_df = read_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), store)
-            except Exception as e:
-                test_all_df = pd.read_csv("cv_features_{0}_{1}.csv".format(learned_class_name, i), index_col=0)
-            # This should normalize the features used for learning columns with the features used for predicting
-            for column in all_df.columns:
-                if column not in test_all_df.columns:
-                    test_all_df[column] = pd.Series([], index=all_df.index)
-            for column in test_all_df.columns:
-                if column not in all_df.columns:
-                    del test_all_df[column]
-            targets = test_all_df[learned_class_name].dropna()
-            features = test_all_df.ix[test_all_df[learned_class_name].dropna().index]
-            # remove the target from the features
-            del features[learned_class_name]
-            metric = get_metric(cfr, features, test_all_df)
-            print "CV: {0} metric: {1}".format(i, metric)
+        # load the features to predict
+        try:
+            test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
+        except Exception as e:
+            test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+        # This should normalize the features used for learning columns with the features used for predicting
+        for column in all_df.columns:
+            if column not in test_all_df.columns:
+                test_all_df[column] = pd.Series([], index=all_df.index)
+        for column in test_all_df.columns:
+            if column not in all_df.columns:
+                del test_all_df[column]
+        # choose the column we are working on
+        arrival_column = "actual_gate_arrival"
+        if learned_class_name == "diff_runway_arrival":
+            arrival_column = "actual_runway_arrival"
+        targets = test_df[arrival_column]
+        features = test_all_df.ix[test_df.index]
+        # predict
+        expectations, max_likes = get_predictions(cfr, features)
+        # loop through test_df and compute the difference b/t actual and expected
+        summer = 0.0
+        for i, (ix, row) in enumerate(test_df.iterrows()):
+            midnight_time = row['midnight_time']
+            predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
+            actual_arrival = row[arrival_column]
+            print predicted_arrival, actual_arrival
+            summer += np.sqrt(np.power((actual_arrival-predicted_arrival), 2))
+        print "MSE for {0}: {1}".format(arrival_column, summer/float(len(expectations)))
     elif kind == "learn":
         print "reading features from store"
         try:
@@ -1609,6 +1626,7 @@ if __name__ == '__main__':
         # create new coumns for the values we want
         all_expectations['actual_gate_arrival'] = np.nan
         all_expectations['actual_runway_arrival'] = np.nan
+        all_expectations['midnight_time'] = np.nan 
         # find out what day the fligh_history_ids are from, so we know midnight
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
@@ -1623,6 +1641,10 @@ if __name__ == '__main__':
                 # so df[actual_class] = df[learned_class_name] + df[scheduled_class]
                 row['actual_gate_arrival'] = minutes_difference(df.ix[ix]['scheduled_gate_arrival'], midnight_time) + row['gate_arrival_diff_expectation']
                 row['actual_runway_arrival'] = minutes_difference(df.ix[ix]['scheduled_runway_arrival'], midnight_time) + row['runway_arrival_diff_expectation']
+                row['midnight_time'] = midnight_time
         # output the final format
-        all_expectations.to_csv("expectations_solution_combined.csv", cols= ['actual_gate_arrival', 'actual_runway_arrival'], index_label="flight_history_id",)
+        all_expectations.to_csv("expectations_solution_combined.csv", cols= ['actual_gate_arrival', 'actual_runway_arrival', 'midnight_time', 'scheduled_gate_arrival', 'scheduled_runway_arrival'], index_label="flight_history_id",)
+
+
+
         

@@ -1250,15 +1250,15 @@ def concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_cols, sampl
 #        print "processing into features"
 #        df = process_into_features(df, unique_cols)
 #        print "features df after all processing: ", df
-#        before_count = len(df.index)
-#        if exclude_df is not None:
-#            keep_index = df.index - exclude_df.index
-#            df = df.ix[keep_index]
-#            print "Number before excluding features: {0} and after: {1}".format(before_count, len(df.index))
-#        before_count = len(df.index)
-#        if include_df is not None:
-#            df = df.ix[include_df.index & df.index]
-#            print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
+        before_count = len(df.index)
+        if exclude_df is not None:
+            keep_index = df.index - exclude_df.index
+            df = df.ix[keep_index]
+            print "Number before excluding features: {0} and after: {1}".format(before_count, len(df.index))
+        before_count = len(df.index)
+        if include_df is not None:
+            df = df.ix[include_df.index & df.index]
+            print "Number before including features: {0} and after: {1}".format(before_count, len(df.index))
     except Exception as e:
         print e
         return all_dfs

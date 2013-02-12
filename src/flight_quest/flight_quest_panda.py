@@ -1292,6 +1292,8 @@ if __name__ == '__main__':
     data_prefix = '/Users/jostheim/workspace/kaggle/data/flight_quest/'
     data_rev_prefix = 'InitialTrainingSet_rev1'
     augmented_data_rev_prefix = 'AugmentedTrainingSet1'
+    augmented2_data_rev_prefix = 'AugmentedTrainingSet2'
+    test_data_training_rev_prefix = 'PublicLeaderboardTrainDays'
     test_data_rev_prefix = 'PublicLeaderboardSet'
     kind = sys.argv[1]
     if len(sys.argv) > 2:
@@ -1314,7 +1316,34 @@ if __name__ == '__main__':
             pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
         results = pool.map(get_joined_data_proxy, pool_queue, 1)
         pool.terminate()
-    if kind == "build_multi_features":
+    elif kind == "build_test":
+        include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0, parse_dates=[5,6,7,8], date_parser=parse_date_time)
+        data = {}
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_training_rev_prefix)).next()[1]:
+            print "Working on {0}".format(subdirname)
+            subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
+            midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
+            df = get_flight_history(data_prefix, test_data_training_rev_prefix, subdirname)
+            df = df.ix[include_df.index]
+            for ix, row in df.iterrows():
+                if ix not in data:
+                    data[ix] = {'flight_history_id':ix, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
+                    if row['actual_runway_arrival'] is not np.nan:
+                        data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
+                    if row['actual_gate_arrival'] is not np.nan:
+                        data[ix]["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
+                else:
+                    tmp = data[ix]
+                    if tmp["actual_runway_arrival"] is np.nan:
+                        if row['actual_runway_arrival'] is not np.nan:
+                            tmp["actual_runway_arrival"] =  minutes_difference(row['actual_runway_arrival'], midnight_time)
+                    if tmp["actual_gate_arrival"] is np.nan:
+                        if row["actual_gate_arrival"] is not np.nan:
+                            tmp["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
+        new_df = pd.DataFrame(data.values())
+        new_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+        new_df.to_csv("test_flights_combined.csv")
+    elif kind == "build_multi_features":
         unique_columns = pickle.load(open("unique_columns.p",'rb'))
         pool_queue = []
         pool = Pool(processes=2)
@@ -1370,6 +1399,19 @@ if __name__ == '__main__':
         all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
         store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
         write_dataframe("features_{0}".format(learned_class_name), all_dfs, store)
+    elif kind == "concat_features":
+        all_dfs = None
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            if all_dfs is None:
+                all_dfs = pd.read_csv("{0}joined_{1}".format("", subdirname))
+            else:
+                all_dfs.append(pd.read_csv("{0}joined_{1}".format("", subdirname)))
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            if all_dfs is None:
+                all_dfs = pd.read_csv("{0}joined_{1}".format("", subdirname))
+            else:
+                all_dfs.append(pd.read_csv("{0}joined_{1}".format("", subdirname)))
+        all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
     elif kind == "concat_predict":
         all_dfs = None
         unique_columns = pickle.load(open("unique_columns.p",'rb'))

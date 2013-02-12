@@ -1403,14 +1403,14 @@ if __name__ == '__main__':
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             if all_dfs is None:
-                all_dfs = pd.read_csv("{0}joined_{1}".format("", subdirname))
+                all_dfs = pd.read_csv("{0}joined_{1}.csv".format("", subdirname))
             else:
-                all_dfs.append(pd.read_csv("{0}joined_{1}".format("", subdirname)))
+                all_dfs.append(pd.read_csv("{0}joined_{1}.csv".format("", subdirname)))
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             if all_dfs is None:
-                all_dfs = pd.read_csv("{0}joined_{1}".format("", subdirname))
+                all_dfs = pd.read_csv("{0}joined_{1}.csv".format("", subdirname))
             else:
-                all_dfs.append(pd.read_csv("{0}joined_{1}".format("", subdirname)))
+                all_dfs.append(pd.read_csv("{0}joined_{1}.csv".format("", subdirname)))
         all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
     elif kind == "concat_predict":
         all_dfs = None

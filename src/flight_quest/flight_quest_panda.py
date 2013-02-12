@@ -1402,11 +1402,13 @@ if __name__ == '__main__':
     elif kind == "concat_features":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            print "Working on {0}".format(subdirname)
             if all_dfs is None:
                 all_dfs = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
             else:
                 all_dfs.append(pd.read_csv("{0}features_{1}.csv".format("", subdirname)))
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            print "Working on {0}".format(subdirname)
             if all_dfs is None:
                 all_dfs = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
             else:

@@ -1489,7 +1489,7 @@ if __name__ == '__main__':
         try:
             all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
         except Exception as e:
-            all_df = pd.read_csv("predict_all_joined_{0}".format(learned_class_name), index_col=0)
+            all_df = pd.read_csv("predict_all_joined_{0}.csv".format(learned_class_name), index_col=0)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
         all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))

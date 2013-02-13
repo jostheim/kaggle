@@ -1429,7 +1429,7 @@ def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, au
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1442,7 +1442,7 @@ def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, au
     
     for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname)å)
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1509,7 +1509,7 @@ def cross_validate(learned_class_name, store):
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
 def learn(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=2000)
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name))
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":

@@ -1592,7 +1592,9 @@ def useful_features(leanred_class_name):
 def learn(learned_class_name):
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000)
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    #fix screwup
     if "ind" in all_df.columns:
+        print "deleting ind"
         del all_df["ind"]
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":

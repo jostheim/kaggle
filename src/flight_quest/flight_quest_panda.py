@@ -1290,8 +1290,12 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, )
     store = pd.HDFStore('flight_quest.h5')
     if 'flight_histories' not in store:
+        all_flight_histories = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             df = get_flight_history(data_prefix, data_rev_prefix, subdirname)
+            if all_flight_histories is None:
+                all_flight_histories = df
+            
 #    for ix, row in all_df.iterrows():
 #        if row[]
     
@@ -1499,7 +1503,9 @@ def learn(learned_class_name):
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
     print learned_class_name
-    series = all_df[learned_class_name].dropna()
+    series = all_df[learned_class_name]
+    series = series.dropna()
+    series = series.dropna()
     all_df = all_df.ix[series.index]
     print len(all_df)
     targets = series.dropna()

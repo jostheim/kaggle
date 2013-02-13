@@ -1486,6 +1486,7 @@ if __name__ == '__main__':
         write_dataframe("features_{0}".format(learned_class_name), all_df, store)
     elif kind == "generate_features_predict":
         unique_cols = {}
+        store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
         try:
             all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
         except Exception as e:

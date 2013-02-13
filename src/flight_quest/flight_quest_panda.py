@@ -1536,6 +1536,8 @@ def cross_validate(learned_class_name, store):
 def learn(learned_class_name):
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000)
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    if "ind" in all_df.columns:
+        del all_df["ind"]
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)

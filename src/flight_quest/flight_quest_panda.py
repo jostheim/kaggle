@@ -1188,7 +1188,7 @@ def random_forest_learn(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=6,
+        n_jobs=1,
         random_state=0,
         )
     cfr.fit(features, targets)
@@ -1287,7 +1287,8 @@ def rebin_targets(targets, nbins):
     return new_bins
 
 def add_previous_flights_features(learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, )
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name))
+    all_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
     store = pd.HDFStore('flight_quest.h5')
     all_flight_histories = None
     if 'flight_histories' not in store:
@@ -1308,9 +1309,33 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
         store['flight_histories'] = all_flight_histories
     else:
         all_flight_histories = store['flight_histories']
-    all_df = all_df.join(all_flight_histories['actual_runway_departure'])
+    all_df['actual_runway_departure'] = all_flight_histories['actual_runway_departure']
+    new_cols = []
     for ix, row in all_df.iterrows():
-        all_df = all_df[all_df['actual_runway_departure']]
+        if row['actual_runway_departure'] is np.nan:
+            continue
+        df_tmp = all_df[all_df['actual_runway_departure'] < row['actual_runway_departure']]
+        df_tmp = df_tmp[df_tmp['arrival_airport_code'] == row['arrival_airport_code']]
+        df_tmp = df_tmp.sort_index(by='actual_runway_departure', ascending=False)
+        # setup a dictionary for this ix/row
+        tmp_dict = {'flight_history_id':ix}
+        # loop through the last 10 flights to the same arrival airport < than the current
+        for i, (ix_tmp, row_tmp) in enumerate(df_tmp.iterrows()[0:10]):
+            if row_tmp['actual_runway_departure'] is np.nan:
+                continue
+            # loop through the colmns
+            for column, val in row_tmp:
+                # add the columns we want to the dict 
+                if 'last_estimated_gate_arrival' in column or 'last_estimated_runway_arrival' in column or 'runway_departure_diff' in column or 'gate_departure_diff':
+                    tmp_dict["{0}_{1}".format(i, column)] = val
+            tmp_dict["{0}_{1}".format(i, 'runway_departure_diff')] = row['actual_runway_departure'] - row_tmp['actual_runway_departure']
+        # append the dict for this ix/row
+        new_cols.append(dict)
+    new_cols_df = pd.DataFrame(new_cols)
+    new_cols_df.set_index('flight_history_id',inplace=True, verify_integrity=True)
+    all_df = all_df.join(new_cols_df)
+    del all_df['actual_runway_departure']
+    all_df.to_csv("features_plus_previous_flights_{0}".format(learned_class_name)) 
         
     
 

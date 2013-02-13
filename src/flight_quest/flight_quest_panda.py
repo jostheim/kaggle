@@ -1450,7 +1450,7 @@ def concat_data(learned_class_name, store, data_prefix, data_rev_prefix, augment
     store = pd.HDFStore('all_joined_{0}.h5'.format(learned_class_name))
     write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
 
-def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
+def concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
@@ -1534,7 +1534,7 @@ def cross_validate(learned_class_name, store):
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
 def learn(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name))
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000)
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
@@ -1681,7 +1681,7 @@ if __name__ == '__main__':
     elif kind == "concat":
         concat_data(learned_class_name, store, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_features":
-        concat_features(random, learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
+        concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_predict":
         all_dfs = None
         concat_predict(learned_class_name, store, data_prefix, test_data_rev_prefix, all_dfs)

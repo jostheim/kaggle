@@ -1393,7 +1393,7 @@ def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
         df = df.ix[include_df.index]
         for ix, row in df.iterrows():
             if ix not in data:
-                data[ix] = {'flight_history_id':ix, "midnight_time":midnight_time, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
+                data[ix] = {'flight_history_id':ix, "midnight_time":midnight_time, "scheduled_gate_arrival":row['scheduled_gate_arrival'], "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
                 if row['actual_runway_arrival'] is not np.nan:
                     data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
                 if row['actual_gate_arrival'] is not np.nan:
@@ -1539,10 +1539,10 @@ def test(learned_class_name, store):
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     print "computing stats"
     summer = 0.0
-    for i, (ix, row) in enumerate(test_df.iterrows()):
-        midnight_time = row['midnight_time']
+    for i, (ix, row) in enumerate(test_all_df.iterrows()):
+        midnight_time = test_df.ix[ix]['midnight_time']
         predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
-        actual_arrival = row[arrival_column]
+        actual_arrival = test_df.ix[ix][arrival_column]
         print predicted_arrival, actual_arrival
         summer += np.sqrt(np.power((actual_arrival - predicted_arrival), 2))
     

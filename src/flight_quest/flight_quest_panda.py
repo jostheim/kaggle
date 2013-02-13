@@ -1316,6 +1316,7 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
             continue
         df_tmp = all_df[all_df['actual_runway_departure'] < row['actual_runway_departure']]
         df_tmp = df_tmp[df_tmp['arrival_airport_code'] == row['arrival_airport_code']]
+        # careful of sotring ascending false
         df_tmp = df_tmp.sort_index(by='actual_runway_departure', ascending=False)
         # setup a dictionary for this ix/row
         tmp_dict = {'flight_history_id':ix}
@@ -1392,7 +1393,7 @@ def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
         df = df.ix[include_df.index]
         for ix, row in df.iterrows():
             if ix not in data:
-                data[ix] = {'flight_history_id':ix, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
+                data[ix] = {'flight_history_id':ix, "midnight_time":midnight_time, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
                 if row['actual_runway_arrival'] is not np.nan:
                     data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
                 if row['actual_gate_arrival'] is not np.nan:
@@ -1478,7 +1479,7 @@ def concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_
             all_dfs = all_dfs.append(df_tmp)
         print "new length {0}".format(all_dfs)
     
-    all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
+    all_dfs.to_csv("features_{0}.csv".format(learned_class_name), index_label="ind")
 
 def concat_predict(learned_class_name, store, data_prefix, test_data_rev_prefix, all_dfs):
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
@@ -1499,15 +1500,16 @@ def generate_features(learned_class_name, store):
     store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
-def cross_validate(learned_class_name, store):
+def test(learned_class_name, store):
     print "reading training features from store" # assumes model already learned
     test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2, 3, 4], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0) # load the model
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name)) 
+    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    if "ind" in all_df.columns:
+        del all_df["ind"]
+    # load the model
     cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
-    try:
-        test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
-    except Exception as e:
-        test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+    test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
 # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
         if column not in test_all_df.columns:
@@ -1520,7 +1522,6 @@ def cross_validate(learned_class_name, store):
     arrival_column = "actual_gate_arrival"
     if learned_class_name == "diff_runway_arrival":
         arrival_column = "actual_runway_arrival"
-    targets = test_df[arrival_column]
     features = test_all_df.ix[test_df.index] # predict
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     summer = 0.0
@@ -1533,6 +1534,43 @@ def cross_validate(learned_class_name, store):
     
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
+def reduce_features(learned_class_name):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name))
+    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    number_columns = {}
+    for column, series in all_df.iteritems():
+        splits = column.split("_")
+        if splits[0].isdigit():
+            tmp = "_".join(splits[1:])
+            if tmp not in number_columns:
+                number_columns[tmp] = [int(splits[0])]
+            else:
+                number_columns[tmp].append(int(splits[0]))
+    cols_to_delete = []
+    for key in number_columns.keys():
+        tmp = sorted(number_columns[key], reverse=True)
+        # keep the top 100
+        for val in tmp[100:]:
+            print "{0}_{1}".format(val, key)
+            cols_to_delete.append("{0}_{1}".format(val, key))
+    for col in cols_to_delete:
+        del all_df[col]
+    all_df.to_csv("reduced_features_{0}.csv".format(learned_class_name))
+
+def useful_features(leanred_class_name):
+    print "Features importance"
+    features = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1)
+    del features[learned_class_name]
+    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
+    features_list = []
+    for j, importance in enumerate(cfr.feature_importances_):
+        if importance > 0.0:
+            column = features.columns[j]
+            features_list.append((column, importance))
+    features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
+    for j, tup in enumerate(features_list):
+        print j, tup
+
 def learn(learned_class_name):
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000)
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
@@ -1544,16 +1582,6 @@ def learn(learned_class_name):
             if len(series.dropna()) > 0:
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
-#    targets = []
-#    features = [] 
-#    for ix, row in all_df.iterrows():
-#        if row[learned_class_name] is not np.nan:
-#            targets.append(row[learned_class_name])
-#            features.append(row)
-#    targets = np.asarray(targets)
-#    features = pd.DataFrame(features)
-#    print targets
-#    print features
     print learned_class_name
     print all_df
     series = all_df[learned_class_name]
@@ -1592,16 +1620,10 @@ def predict(learned_class_name, features_to_remove, store):
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del test_all_df[column] # read in the training features remove bad columns
     
-    try:
-        all_df = read_dataframe("features_{0}".format(learned_class_name), store)
-    except Exception as e:
-        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
-    for i, (column, series) in enumerate(all_df.iteritems()):
-        if series.dtype is object or str(series.dtype) == "object":
-            print "AFter convert types {0} is still an object".format(column)
-            if len(series.dropna()) > 0:
-                print "is all nan and not 0:  {0}".format(len(series.dropna()))
-            del all_df[column]
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1)
+    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    if "ind" in all_df.columns:
+        del all_df["ind"]
     
 # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
@@ -1695,7 +1717,7 @@ if __name__ == '__main__':
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "cross_validate":
-        cross_validate(learned_class_name, store)
+        test(learned_class_name, store)
     elif kind == "learn":
         print "reading features from store"
         learn(learned_class_name)
@@ -1703,7 +1725,10 @@ if __name__ == '__main__':
         predict(learned_class_name, features_to_remove, store)
     elif kind == "finalize_output":
         finalize(store_filename, data_prefix, data_rev_prefix, test_data_rev_prefix)
-
+    elif kind == "reduce_features":
+        reduce_features(learned_class_name)
+    elif kind == "useful_features":
+        useful_features(learned_class_name)
 
 
 

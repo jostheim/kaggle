@@ -1289,8 +1289,8 @@ def rebin_targets(targets, nbins):
 def add_previous_flights_features(learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, )
     store = pd.HDFStore('flight_quest.h5')
+    all_flight_histories = None
     if 'flight_histories' not in store:
-        all_flight_histories = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             df = get_flight_history(data_prefix, data_rev_prefix, subdirname)
             if all_flight_histories is None:
@@ -1306,9 +1306,11 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
                 all_flight_histories.append(df)
                 all_flight_histories.drop_duplicates(take_last=True, inplace=True)
         store['flight_histories'] = all_flight_histories
-            
-#    for ix, row in all_df.iterrows():
-#        if row[]
+    else:
+        all_flight_histories = store['flight_histories']
+    for ix, row in all_df.iterrows():
+        # get scheduled departure
+        
     
 
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
@@ -1521,6 +1523,8 @@ def learn(learned_class_name):
             features.append(row)
     targets = np.asarray(targets)
     features = pd.DataFrame(features)
+    print targets
+    print features
 #    print learned_class_name
 #    print all_df
 #    series = all_df[learned_class_name]

@@ -1502,15 +1502,18 @@ def generate_features(learned_class_name, store):
 
 def test(learned_class_name, store):
     print "reading training features from store" # assumes model already learned
-    test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2, 3, 4], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name)) 
+    # load the test truth data
+    test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[3], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
+    # load the first row of the training features, so we get the columns
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    # fix screw up with index column
     if "ind" in all_df.columns:
         del all_df["ind"]
     # load the model
     cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
     test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
-# This should normalize the features used for learning columns with the features used for predicting
+    # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
         if column not in test_all_df.columns:
             test_all_df[column] = pd.Series([], index=all_df.index)
@@ -1519,10 +1522,15 @@ def test(learned_class_name, store):
         if column not in all_df.columns:
             del test_all_df[column] # choose the column we are working on
     
+    # map the learned_class_name to the test_class for comparison
     arrival_column = "actual_gate_arrival"
     if learned_class_name == "diff_runway_arrival":
         arrival_column = "actual_runway_arrival"
-    features = test_all_df.ix[test_df.index] # predict
+    # ensure columns are in same order as training
+    test_all_df = test_all_df.reindex(columns=all_df.columns) 
+    # features we want to test are the ones in the test file
+    features = test_all_df.ix[test_df.index]
+    # predict
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     summer = 0.0
     for i, (ix, row) in enumerate(test_df.iterrows()):

@@ -1286,6 +1286,10 @@ def rebin_targets(targets, nbins):
             new_bins.append((bins[digit-1] + bins[digit])/2.0)
     return new_bins
 
+def add_previous_flights_features(learned_class_name):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=10000)
+    
+
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
     pool_queue = []
     pool = Pool(processes=4)
@@ -1488,10 +1492,10 @@ def learn(learned_class_name):
             if len(series.dropna()) > 0:
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
-    
+    print learned_class_name
     all_df = all_df.ix[all_df[learned_class_name].dropna().index]
     print len(all_df)
-    targets = all_df[learned_class_name]
+    targets = all_df[learned_class_name].dropna()
     print len(targets.index)
     targets = targets.apply(lambda x:myround(x, base=1))
     features = all_df

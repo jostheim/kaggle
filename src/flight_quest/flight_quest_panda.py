@@ -1310,6 +1310,7 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
         all_flight_histories = store['flight_histories']
     for ix, row in all_df.iterrows():
         # get scheduled departure
+        pass
         
     
 

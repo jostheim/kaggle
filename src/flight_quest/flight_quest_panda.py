@@ -1513,24 +1513,24 @@ def test(learned_class_name, store):
         del all_df["ind"]
     # load the model
     print "reading testing features from store "
-    test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
+    test_features_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
     # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
-        if column not in test_all_df.columns:
-            test_all_df[column] = pd.Series(index=test_all_df.index)
+        if column not in test_features_df.columns:
+            test_features_df[column] = pd.Series(index=test_features_df.index)
     
-    for column in test_all_df.columns:
+    for column in test_features_df.columns:
         if column not in all_df.columns:
-            del test_all_df[column] # choose the column we are working on
+            del test_features_df[column] # choose the column we are working on
     
     # map the learned_class_name to the test_class for comparison
     arrival_column = "actual_gate_arrival"
     if learned_class_name == "diff_runway_arrival":
         arrival_column = "actual_runway_arrival"
     # ensure columns are in same order as training
-    test_all_df = test_all_df.reindex(columns=all_df.columns) 
+    test_features_df = test_features_df.reindex(columns=all_df.columns) 
     # features we want to test are the ones in the test file
-    features = test_all_df.ix[test_df.index]
+    features = test_features_df.ix[test_df.index]
     # predict
     print "reading model"
     cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) 
@@ -1539,7 +1539,7 @@ def test(learned_class_name, store):
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     print "computing stats"
     summer = 0.0
-    for i, (ix, row) in enumerate(test_all_df.iterrows()):
+    for i, (ix, row) in enumerate(test_features_df.iterrows()):
         midnight_time = test_df.ix[ix]['midnight_time']
         predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
         actual_arrival = test_df.ix[ix][arrival_column]

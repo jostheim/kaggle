@@ -1509,11 +1509,11 @@ def test(learned_class_name, store):
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
     # fix screw up with index column
-    if "ind" in all_df.columns:
-        del all_df["ind"]
+#    if "ind" in all_df.columns:
+#        del all_df["ind"]
     # load the model
     print "reading testing features from store "
-    test_features_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
+    test_features_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0, nrows=10)
     # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
         if column not in test_features_df.columns:

@@ -1501,7 +1501,7 @@ def generate_features(learned_class_name, store):
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
 def test(learned_class_name, store):
-    print "reading testing features from store" # assumes model already learned
+    print "reading testing truth data from store" # assumes model already learned
     # load the test truth data
     test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[3], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
     # load the first row of the training features, so we get the columns
@@ -1512,7 +1512,8 @@ def test(learned_class_name, store):
     if "ind" in all_df.columns:
         del all_df["ind"]
     # load the model
-    test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+    print "reading testing features from store "
+    test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
     # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
         if column not in test_all_df.columns:

@@ -1286,8 +1286,14 @@ def rebin_targets(targets, nbins):
             new_bins.append((bins[digit-1] + bins[digit])/2.0)
     return new_bins
 
-def add_previous_flights_features(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=10000)
+def add_previous_flights_features(learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, )
+    store = pd.HDFStore('flight_quest.h5')
+    if 'flight_histories' not in store:
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+            df = get_flight_history(data_prefix, data_rev_prefix, subdirname)
+    for ix, row in all_df.iterrows():
+        if row[]
     
 
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
@@ -1485,7 +1491,7 @@ def cross_validate(learned_class_name, store):
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
 def learn(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=10000)
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=2000)
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)
@@ -1493,9 +1499,10 @@ def learn(learned_class_name):
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
     print learned_class_name
-    all_df = all_df.ix[all_df[learned_class_name].dropna().index]
+    series = all_df[learned_class_name].dropna()
+    all_df = all_df.ix[series.index]
     print len(all_df)
-    targets = all_df[learned_class_name].dropna()
+    targets = series.dropna()
     print len(targets.index)
     targets = targets.apply(lambda x:myround(x, base=1))
     features = all_df

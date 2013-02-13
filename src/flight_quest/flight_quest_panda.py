@@ -1503,6 +1503,7 @@ def learn(learned_class_name):
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
     print learned_class_name
+    print all_df
     series = all_df[learned_class_name]
     series = series.dropna()
     series = series.dropna()

@@ -1292,8 +1292,8 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
     if 'flight_histories' not in store:
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
             df = get_flight_history(data_prefix, data_rev_prefix, subdirname)
-    for ix, row in all_df.iterrows():
-        if row[]
+#    for ix, row in all_df.iterrows():
+#        if row[]
     
 
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):

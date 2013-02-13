@@ -20,7 +20,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
 import traceback
 
-
+random.seed(0)
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
 global learned_class_name, actual_class, scheduled_class
@@ -1314,6 +1314,130 @@ def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_r
     
     pickle.dump(all_unique_cols, open("unique_columns.p", "wb"))
 
+def build_multi(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
+    pool_queue = []
+    pool = Pool(processes=4)
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
+    
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
+    
+    results = pool.map(get_joined_data_proxy, pool_queue, 1)
+    pool.terminate()
+    
+def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix):
+    include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0, parse_dates=[5, 6, 7, 8], date_parser=parse_date_time)
+    data = {}
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_training_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
+        midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
+        df = get_flight_history(data_prefix, test_data_training_rev_prefix, subdirname)
+        df = df.ix[include_df.index]
+        for ix, row in df.iterrows():
+            if ix not in data:
+                data[ix] = {'flight_history_id':ix, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
+                if row['actual_runway_arrival'] is not np.nan:
+                    data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
+                if row['actual_gate_arrival'] is not np.nan:
+                    data[ix]["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
+            else:
+                tmp = data[ix]
+                if tmp["actual_runway_arrival"] is np.nan:
+                    if row['actual_runway_arrival'] is not np.nan:
+                        tmp["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
+                if tmp["actual_gate_arrival"] is np.nan:
+                    if row["actual_gate_arrival"] is not np.nan:
+                        tmp["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
+    new_df = pd.DataFrame(data.values())
+    new_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    new_df.to_csv("test_flights_combined.csv")
+
+
+def build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
+    unique_columns = pickle.load(open("unique_columns.p", 'rb'))
+    pool_queue = []
+    pool = Pool(processes=2)
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
+    
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+        if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
+            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
+    
+    results = pool.map(get_joined_data_proxy, pool_queue, 1)
+    pool.terminate()
+
+def build_predict(store_filename, data_prefix, test_data_rev_prefix):
+    pool_queue = []
+    pool = Pool(processes=4)
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "predict_"])
+    
+    results = pool.map(get_joined_data_proxy, pool_queue, 1)
+    pool.terminate()
+
+def concat_data(learned_class_name, store, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
+    all_dfs = None
+    unique_columns = pickle.load(open("unique_columns.p", 'rb'))
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
+    
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+        all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
+    
+    all_dfs.to_csv("all_joined_{0}.csv".format(learned_class_name))
+    store = pd.HDFStore('all_joined_{0}.h5'.format(learned_class_name))
+    write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
+
+def concat_features(random, learned_class_name, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
+    all_dfs = None
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        if sample_size is not None:
+            samples = sample_size
+            rows = random.sample(df_tmp.index, samples)
+            df_tmp = df_tmp.ix[rows]
+        if all_dfs is None:
+            all_dfs = df_tmp
+        else:
+            all_dfs = all_dfs.append(df_tmp)
+        print "new length {0}".format(all_dfs)
+    
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+        print "Working on {0}".format(subdirname)
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        if sample_size is not None:
+            samples = sample_size
+            rows = random.sample(df_tmp.index, samples)
+            df_tmp = df_tmp.ix[rows]
+        if all_dfs is None:
+            all_dfs = pd.read_csv(df_tmp)
+        else:
+            all_dfs = all_dfs.append(df_tmp)
+        print "new length {0}".format(all_dfs)
+    
+    all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
+
+def concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_prefix, all_dfs):
+    unique_columns = pickle.load(open("unique_columns.p", 'rb'))
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+        include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
+        all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, unique_columns, include_df=include_df, prefix="predict_")
+    
+    all_dfs.to_csv("predict_all_joined_{0}.csv".format(learned_class_name))
+    store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
+    write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
+
+
 
 if __name__ == '__main__':
     store = pd.HDFStore('flight_quest.h5')
@@ -1335,147 +1459,20 @@ if __name__ == '__main__':
     if len(sys.argv) > 5:
         sample_size = int(sys.argv[5])
     if kind == "build_multi":
-        pool_queue = []
-        pool = Pool(processes=4)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename])
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename])
-        results = pool.map(get_joined_data_proxy, pool_queue, 1)
-        pool.terminate()
+        build_multi(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "build_test":
-        include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0, parse_dates=[5,6,7,8], date_parser=parse_date_time)
-        data = {}
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_training_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
-            midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
-            df = get_flight_history(data_prefix, test_data_training_rev_prefix, subdirname)
-            df = df.ix[include_df.index]
-            for ix, row in df.iterrows():
-                if ix not in data:
-                    data[ix] = {'flight_history_id':ix, "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
-                    if row['actual_runway_arrival'] is not np.nan:
-                        data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
-                    if row['actual_gate_arrival'] is not np.nan:
-                        data[ix]["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
-                else:
-                    tmp = data[ix]
-                    if tmp["actual_runway_arrival"] is np.nan:
-                        if row['actual_runway_arrival'] is not np.nan:
-                            tmp["actual_runway_arrival"] =  minutes_difference(row['actual_runway_arrival'], midnight_time)
-                    if tmp["actual_gate_arrival"] is np.nan:
-                        if row["actual_gate_arrival"] is not np.nan:
-                            tmp["actual_gate_arrival"] = minutes_difference(row['actual_gate_arrival'], midnight_time)
-        new_df = pd.DataFrame(data.values())
-        new_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-        new_df.to_csv("test_flights_combined.csv")
+        build_test(pd, data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
     elif kind == "build_multi_features":
-        unique_columns = pickle.load(open("unique_columns.p",'rb'))
-        pool_queue = []
-        pool = Pool(processes=2)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
-                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None,  True, unique_columns])
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
-                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
-        results = pool.map(get_joined_data_proxy, pool_queue, 1)
-        pool.terminate()
-    elif kind == "build":
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            get_joined_data(data_prefix, augmented_data_rev_prefix, subdirname, store_filename)
+        build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "build_predict":
-        pool_queue = []
-        pool = Pool(processes=4)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "predict_"])
-        results = pool.map(get_joined_data_proxy, pool_queue, 1)
-        pool.terminate()
-    elif kind == "build_cross_validation":
-        pool_queue = []
-        pool = Pool(processes=4)
-        for i in xrange(5):
-            for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-                subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
-                cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
-                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
-            results = pool.map(get_joined_data_proxy, pool_queue, 1)
-            for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-                subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
-                cutoff_time = generate_cutoff_times(subdir_date, 1)[0]
-                store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-                pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "cv_{0}_".format(i), cutoff_time])
-            results = pool.map(get_joined_data_proxy, pool_queue, 1)
-        pool.terminate()
+        build_predict(store_filename, data_prefix, test_data_rev_prefix)
     elif kind == "concat":
-        all_dfs = None
-        unique_columns = pickle.load(open("unique_columns.p",'rb'))
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
-        all_dfs.to_csv("all_joined_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('all_joined_{0}.h5'.format(learned_class_name))
-        write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
+        concat_data(learned_class_name, store, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_features":
-        all_dfs = None
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
-            if sample_size is not None:
-                samples = sample_size
-                rows = random.sample(df_tmp.index, samples)
-                df_tmp = df_tmp.ix[rows]
-            if all_dfs is None:
-                all_dfs = df_tmp 
-            else:
-                all_dfs = all_dfs.append(df_tmp)
-            print "new length {0}".format(all_dfs)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            print "Working on {0}".format(subdirname)
-            df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
-            if sample_size is not None:
-                samples = sample_size
-                rows = random.sample(df_tmp.index, samples)
-                df_tmp = df_tmp.ix[rows]
-            if all_dfs is None:
-                all_dfs = pd.read_csv(df_tmp)
-            else:
-                all_dfs = all_dfs.append(df_tmp)
-            print "new length {0}".format(all_dfs)
-        all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
+        concat_features(random, learned_class_name, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_predict":
         all_dfs = None
-        unique_columns = pickle.load(open("unique_columns.p",'rb'))
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
-            include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
-            all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, unique_columns, include_df=include_df, prefix="predict_")
-        all_dfs.to_csv("predict_all_joined_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
-        write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
-    elif kind == "concat_cross_validate":
-        train_all_df = read_dataframe("all_joined", store)
-        all_dfs = None
-        unique_columns = pickle.load(open("unique_columns.p",'rb'))
-        for i in xrange(5):
-            for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
-                all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-            for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-                all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size, exclude_df=train_all_df, prefix="cv_{0}_".format(i))
-            all_dfs.to_csv("cv_features_{0}_{1}.csv".format(learned_class_name))
-            store = pd.HDFStore('cv_features_{0}_{1}.h5'.format(learned_class_name))
-            write_dataframe("cv_all_features_{0}_{1}".format(learned_class_name), all_dfs, store)
+        concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_prefix, all_dfs)
     elif kind == "generate_features":
         unique_cols = {}
         all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)
@@ -1493,15 +1490,6 @@ if __name__ == '__main__':
         all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))
         store = pd.HDFStore('predict_features_{0}.h5'.format(learned_class_name))
         write_dataframe("predict_features_{0}".format(learned_class_name), all_df, store)
-    elif kind == "generate_features_cross_validate":
-        unique_cols = {}
-        for i in xrange(5):
-            all_df = read_dataframe("cv_all_joined_{0}_{1}".format(learned_class_name,i), store)
-            unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-            all_df = process_into_features(all_df, unique_cols)
-            all_df.to_csv("cv_features_{0}_{1}.csv".format(learned_class_name,i))
-            store = pd.HDFStore('cv_features_{0}_{1}.h5'.format(learned_class_name, i))
-            write_dataframe("cv_features_{0}_{1}".format(learned_class_name, i), all_df, store)
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
@@ -1551,9 +1539,10 @@ if __name__ == '__main__':
                 if len(series.dropna()) > 0:
                     print "is all nan and not 0:  {0}".format(len(series.dropna()))
                 del all_df[column]
+        all_df = all_df.ix[all_df[learned_class_name].dropna()]
+        print len(all_df)
         targets = all_df[learned_class_name].dropna()
         print len(targets.index)
-        # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=1))
         features = all_df.ix[targets.index]
         print len(targets.index), len(features.index)
@@ -1640,4 +1629,3 @@ if __name__ == '__main__':
 
 
 
-        

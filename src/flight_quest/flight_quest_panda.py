@@ -1510,10 +1510,7 @@ if __name__ == '__main__':
         print "reading training features from store"
         test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2,3,4], date_parser=parse_date_time)
         # we need the features we trained from, in order to normalize the columns
-        try:
-            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
-        except Exception as e:
-            all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
         # load the model
         cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
         # load the features to predict
@@ -1547,10 +1544,7 @@ if __name__ == '__main__':
         print "MSE for {0}: {1}".format(arrival_column, summer/float(len(expectations)))
     elif kind == "learn":
         print "reading features from store"
-        try:
-            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
-        except Exception as e:
-            all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
         for i, (column, series) in enumerate(all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)
@@ -1558,6 +1552,7 @@ if __name__ == '__main__':
                     print "is all nan and not 0:  {0}".format(len(series.dropna()))
                 del all_df[column]
         targets = all_df[learned_class_name].dropna()
+        print len(targets.index)
         # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=1))
         features = all_df.ix[targets.index]
@@ -1573,10 +1568,7 @@ if __name__ == '__main__':
         # n_jobs breaks this from the pickle
         cfr.set_params(n_jobs=1)
         # read in the features to predict, remove bad columns
-        try:
-            test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
-        except Exception as e:
-            test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+        test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
         for i, (column, series) in enumerate(test_all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)

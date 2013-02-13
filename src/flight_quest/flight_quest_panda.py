@@ -1532,7 +1532,7 @@ if __name__ == '__main__':
         print "MSE for {0}: {1}".format(arrival_column, summer/float(len(expectations)))
     elif kind == "learn":
         print "reading features from store"
-        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
         for i, (column, series) in enumerate(all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)

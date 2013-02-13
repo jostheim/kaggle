@@ -1308,11 +1308,10 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
         store['flight_histories'] = all_flight_histories
     else:
         all_flight_histories = store['flight_histories']
+    all_df = all_df.join(all_flight_histories['actual_runway_departure'])
     for ix, row in all_df.iterrows():
-        # get scheduled departure
-        all_flight_history_row = all_flight_histories.ix[ix]
-        if all_flight_history_row['scheduled_runway_departure'] is not np.nan:
-            pass
+        all_df = all_df[all_df['actual_runway_departure']]
+        
     
 
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
@@ -1510,35 +1509,35 @@ def cross_validate(learned_class_name, store):
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
 def learn(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=2000)
+    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)
             if len(series.dropna()) > 0:
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
-    targets = []
-    features = [] 
-    for ix, row in all_df.iterrows():
-        if row[learned_class_name] is not np.nan:
-            targets.append(row[learned_class_name])
-            features.append(row)
-    targets = np.asarray(targets)
-    features = pd.DataFrame(features)
-    print targets
-    print features
-#    print learned_class_name
-#    print all_df
-#    series = all_df[learned_class_name]
-#    series = series.dropna()
-#    series = series.dropna()
-#    all_df = all_df.ix[series.index]
-#    print len(all_df)
-#    targets = series.dropna()
-#    print len(targets.index)
-#    targets = targets.apply(lambda x:myround(x, base=1))
-#    features = all_df
-#    print len(targets.index), len(features.index) # remove the target from the features
+#    targets = []
+#    features = [] 
+#    for ix, row in all_df.iterrows():
+#        if row[learned_class_name] is not np.nan:
+#            targets.append(row[learned_class_name])
+#            features.append(row)
+#    targets = np.asarray(targets)
+#    features = pd.DataFrame(features)
+#    print targets
+#    print features
+    print learned_class_name
+    print all_df
+    series = all_df[learned_class_name]
+    series = series.dropna()
+    all_df = all_df.ix[series.index]
+    print len(all_df)
+    targets = series.dropna()
+    print len(targets.index)
+    targets = targets.apply(lambda x:myround(x, base=1))
+    features = all_df
+    print len(targets.index), len(features.index) # remove the target from the features
     del features[learned_class_name]
     cfr = random_forest_learn(targets, features)
     pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))

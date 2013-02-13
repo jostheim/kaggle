@@ -1295,6 +1295,17 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
             df = get_flight_history(data_prefix, data_rev_prefix, subdirname)
             if all_flight_histories is None:
                 all_flight_histories = df
+            else:
+                all_flight_histories.append(df)
+                all_flight_histories.drop_duplicates(take_last=True, inplace=True)
+        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+            df = get_flight_history(data_prefix, augmented_data_rev_prefix, subdirname)
+            if all_flight_histories is None:
+                all_flight_histories = df
+            else:
+                all_flight_histories.append(df)
+                all_flight_histories.drop_duplicates(take_last=True, inplace=True)
+        store['flight_histories'] = all_flight_histories
             
 #    for ix, row in all_df.iterrows():
 #        if row[]
@@ -1415,7 +1426,7 @@ def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, au
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1428,7 +1439,7 @@ def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, au
     
     for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1502,18 +1513,26 @@ def learn(learned_class_name):
             if len(series.dropna()) > 0:
                 print "is all nan and not 0:  {0}".format(len(series.dropna()))
             del all_df[column]
-    print learned_class_name
-    print all_df
-    series = all_df[learned_class_name]
-    series = series.dropna()
-    series = series.dropna()
-    all_df = all_df.ix[series.index]
-    print len(all_df)
-    targets = series.dropna()
-    print len(targets.index)
-    targets = targets.apply(lambda x:myround(x, base=1))
-    features = all_df
-    print len(targets.index), len(features.index) # remove the target from the features
+    targets = []
+    features = [] 
+    for ix, row in all_df.iterrows():
+        if row[learned_class_name] is not np.nan:
+            targets.append(row[learned_class_name])
+            features.append(row)
+    targets = np.asarray(targets)
+    features = pd.DataFrame(features)
+#    print learned_class_name
+#    print all_df
+#    series = all_df[learned_class_name]
+#    series = series.dropna()
+#    series = series.dropna()
+#    all_df = all_df.ix[series.index]
+#    print len(all_df)
+#    targets = series.dropna()
+#    print len(targets.index)
+#    targets = targets.apply(lambda x:myround(x, base=1))
+#    features = all_df
+#    print len(targets.index), len(features.index) # remove the target from the features
     del features[learned_class_name]
     cfr = random_forest_learn(targets, features)
     pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))

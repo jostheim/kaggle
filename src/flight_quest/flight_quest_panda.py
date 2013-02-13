@@ -1384,7 +1384,7 @@ def build_predict(store_filename, data_prefix, test_data_rev_prefix):
     results = pool.map(get_joined_data_proxy, pool_queue, 1)
     pool.terminate()
 
-def concat_data(learned_class_name, store, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
+def concat_data(learned_class_name, store, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
     all_dfs = None
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
@@ -1397,7 +1397,7 @@ def concat_data(learned_class_name, store, pd, data_prefix, data_rev_prefix, aug
     store = pd.HDFStore('all_joined_{0}.h5'.format(learned_class_name))
     write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
 
-def concat_features(random, learned_class_name, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
+def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
@@ -1427,7 +1427,7 @@ def concat_features(random, learned_class_name, pd, data_prefix, data_rev_prefix
     
     all_dfs.to_csv("features_{0}.csv".format(learned_class_name))
 
-def concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_prefix, all_dfs):
+def concat_predict(learned_class_name, store, data_prefix, test_data_rev_prefix, all_dfs):
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
     for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
         include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
@@ -1445,6 +1445,143 @@ def generate_features(learned_class_name, store):
     all_df.to_csv("features_{0}.csv".format(learned_class_name))
     store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
+
+def cross_validate(learned_class_name, store):
+    print "reading training features from store" # assumes model already learned
+    test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2, 3, 4], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0) # load the model
+    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
+    try:
+        test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
+    except Exception as e:
+        test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+# This should normalize the features used for learning columns with the features used for predicting
+    for column in all_df.columns:
+        if column not in test_all_df.columns:
+            test_all_df[column] = pd.Series([], index=all_df.index)
+    
+    for column in test_all_df.columns:
+        if column not in all_df.columns:
+            del test_all_df[column] # choose the column we are working on
+    
+    arrival_column = "actual_gate_arrival"
+    if learned_class_name == "diff_runway_arrival":
+        arrival_column = "actual_runway_arrival"
+    targets = test_df[arrival_column]
+    features = test_all_df.ix[test_df.index] # predict
+    expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
+    summer = 0.0
+    for i, (ix, row) in enumerate(test_df.iterrows()):
+        midnight_time = row['midnight_time']
+        predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
+        actual_arrival = row[arrival_column]
+        print predicted_arrival, actual_arrival
+        summer += np.sqrt(np.power((actual_arrival - predicted_arrival), 2))
+    
+    print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
+
+def learn(learned_class_name):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
+    for i, (column, series) in enumerate(all_df.iteritems()):
+        if series.dtype is object or str(series.dtype) == "object":
+            print "AFter convert types {0} is still an object".format(column)
+            if len(series.dropna()) > 0:
+                print "is all nan and not 0:  {0}".format(len(series.dropna()))
+            del all_df[column]
+    
+    all_df = all_df.ix[all_df[learned_class_name].dropna().index]
+    print len(all_df)
+    targets = all_df[learned_class_name]
+    print len(targets.index)
+    targets = targets.apply(lambda x:myround(x, base=1))
+    features = all_df
+    print len(targets.index), len(features.index) # remove the target from the features
+    del features[learned_class_name]
+    cfr = random_forest_learn(targets, features)
+    pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
+
+def generate_features_predict(learned_class_name, store):
+    unique_cols = {}
+    store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
+    all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
+    unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+    all_df = process_into_features(all_df, unique_cols)
+    all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))
+    store = pd.HDFStore('predict_features_{0}.h5'.format(learned_class_name))
+    write_dataframe("predict_features_{0}".format(learned_class_name), all_df, store)
+
+def predict(learned_class_name, features_to_remove, store):
+    print "reading features from store"
+    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
+    print cfr.classes_[0] # n_jobs breaks this from the pickle
+    cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
+    test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
+    for i, (column, series) in enumerate(test_all_df.iteritems()):
+        if series.dtype is object or str(series.dtype) == "object":
+            print "AFter convert types {0} is still an object".format(column)
+            if len(series.dropna()) > 0:
+                print "is all nan and not 0:  {0}".format(len(series.dropna()))
+            del test_all_df[column] # read in the training features remove bad columns
+    
+    try:
+        all_df = read_dataframe("features_{0}".format(learned_class_name), store)
+    except Exception as e:
+        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+    for i, (column, series) in enumerate(all_df.iteritems()):
+        if series.dtype is object or str(series.dtype) == "object":
+            print "AFter convert types {0} is still an object".format(column)
+            if len(series.dropna()) > 0:
+                print "is all nan and not 0:  {0}".format(len(series.dropna()))
+            del all_df[column]
+    
+# This should normalize the features used for learning columns with the features used for predicting
+    for column in all_df.columns:
+        if column not in test_all_df.columns:
+            test_all_df[column] = pd.Series(index=all_df.index)
+    
+    for column in test_all_df.columns:
+        if column not in all_df.columns:
+            del test_all_df[column] # re-index with the columns from the learned features to establish proper ordering
+    
+    test_all_df = test_all_df.reindex(columns=all_df.columns)
+            # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
+            # but the one I am targeting
+    for col in features_to_remove:
+        if col in test_all_df.columns:
+            del test_all_df[col]
+    
+    expectations, max_probs = get_predictions(cfr, test_all_df) # create expectations df and output
+    expect_df = pd.DataFrame(expectations)
+    expect_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    expect_df.to_csv('expecations_{0}.csv'.format(learned_class_name)) # create max_probability df and output
+    max_prob_df = pd.DataFrame(max_probs)
+    max_prob_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
+    max_prob_df.to_csv('max_prob_{0}.csv'.format(learned_class_name))
+
+def finalize(store_filename, data_prefix, data_rev_prefix, test_data_rev_prefix):
+    # load in the predictions
+    gate_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("gate_arrival_diff"), index_col=0)
+    runway_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("runway_arrival_diff"), index_col=0)
+    print "len(gate_arrival_expectations):{0} should equal len(runway_arrival_expectations) {1}".format(len(gate_arrival_expectations.index), len(runway_arrival_expectations.index)) # join them together
+    all_expectations = gate_arrival_expectations.join(runway_arrival_expectations) # create new coumns for the values we want
+    all_expectations['actual_gate_arrival'] = np.nan
+    all_expectations['actual_runway_arrival'] = np.nan
+    all_expectations['midnight_time'] = np.nan
+    # find out what day the fligh_history_ids are from, so we know midnight
+    for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
+        store_filename = 'flight_quest_{0}.h5'.format(subdirname)
+        subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
+        midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
+        df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename) # get the intersection of the ids in our expectations and the current df
+        intersection = all_expectations & df
+    # loop through teh intersection and compute minutes after midnight, store it in the columns we created
+        for ix, row in all_expectations.ix[intersection]: #df[learned_class_name] = df[actual_class] - df[scheduled_class]
+            # so df[actual_class] = df[learned_class_name] + df[scheduled_class]
+            row['actual_gate_arrival'] = minutes_difference(df.ix[ix]['scheduled_gate_arrival'], midnight_time) + row['gate_arrival_diff_expectation']
+            row['actual_runway_arrival'] = minutes_difference(df.ix[ix]['scheduled_runway_arrival'], midnight_time) + row['runway_arrival_diff_expectation']
+            row['midnight_time'] = midnight_time # output the final format
+    
+    all_expectations.to_csv("expectations_solution_combined.csv", cols=['actual_gate_arrival', 'actual_runway_arrival', 'midnight_time', 'scheduled_gate_arrival', 'scheduled_runway_arrival'], index_label="flight_history_id")
 
 
 if __name__ == '__main__':
@@ -1469,165 +1606,44 @@ if __name__ == '__main__':
     if kind == "build_multi":
         build_multi(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "build_test":
-        build_test(pd, data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
+        build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
     elif kind == "build_multi_features":
         build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "build_predict":
         build_predict(store_filename, data_prefix, test_data_rev_prefix)
     elif kind == "concat":
-        concat_data(learned_class_name, store, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
+        concat_data(learned_class_name, store, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_features":
-        concat_features(random, learned_class_name, pd, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
+        concat_features(random, learned_class_name, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "concat_predict":
         all_dfs = None
-        concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_prefix, all_dfs)
+        concat_predict(learned_class_name, store, data_prefix, test_data_rev_prefix, all_dfs)
     elif kind == "generate_features":
-        generate_features(learned_class_name, store, pd)
+        generate_features(learned_class_name, store)
     elif kind == "generate_features_predict":
-        unique_cols = {}
-        store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
-        all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
-        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        all_df = process_into_features(all_df, unique_cols)
-        all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('predict_features_{0}.h5'.format(learned_class_name))
-        write_dataframe("predict_features_{0}".format(learned_class_name), all_df, store)
+        generate_features_predict(learned_class_name, store)
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "cross_validate":
-        # assumes model already learned
-        print "reading training features from store"
-        test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[2,3,4], date_parser=parse_date_time)
-        # we need the features we trained from, in order to normalize the columns
-        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
-        # load the model
-        cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
-        # load the features to predict
-        try:
-            test_all_df = read_dataframe("predict_features_{0}".format(learned_class_name), store)
-        except Exception as e:
-            test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
-        # This should normalize the features used for learning columns with the features used for predicting
-        for column in all_df.columns:
-            if column not in test_all_df.columns:
-                test_all_df[column] = pd.Series([], index=all_df.index)
-        for column in test_all_df.columns:
-            if column not in all_df.columns:
-                del test_all_df[column]
-        # choose the column we are working on
-        arrival_column = "actual_gate_arrival"
-        if learned_class_name == "diff_runway_arrival":
-            arrival_column = "actual_runway_arrival"
-        targets = test_df[arrival_column]
-        features = test_all_df.ix[test_df.index]
-        # predict
-        expectations, max_likes = get_predictions(cfr, features)
-        # loop through test_df and compute the difference b/t actual and expected
-        summer = 0.0
-        for i, (ix, row) in enumerate(test_df.iterrows()):
-            midnight_time = row['midnight_time']
-            predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
-            actual_arrival = row[arrival_column]
-            print predicted_arrival, actual_arrival
-            summer += np.sqrt(np.power((actual_arrival-predicted_arrival), 2))
-        print "MSE for {0}: {1}".format(arrival_column, summer/float(len(expectations)))
+        cross_validate(learned_class_name, store)
     elif kind == "learn":
         print "reading features from store"
-        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=10000)
-        for i, (column, series) in enumerate(all_df.iteritems()):
-            if series.dtype is object or str(series.dtype) == "object":
-                print "AFter convert types {0} is still an object".format(column)
-                if len(series.dropna()) > 0:
-                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
-                del all_df[column]
-        all_df = all_df.ix[all_df[learned_class_name].dropna()]
-        print len(all_df)
-        targets = all_df[learned_class_name].dropna()
-        print len(targets.index)
-        targets = targets.apply(lambda x: myround(x, base=1))
-        features = all_df.ix[targets.index]
-        print len(targets.index), len(features.index)
-        # remove the target from the features
-        del features[learned_class_name]
-        cfr = random_forest_learn(targets, features)
-        pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
+        learn(learned_class_name)
     elif kind == "predict":
-        print "reading features from store"
-        cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb'))
-        print cfr.classes_[0]
-        # n_jobs breaks this from the pickle
-        cfr.set_params(n_jobs=1)
-        # read in the features to predict, remove bad columns
-        test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
-        for i, (column, series) in enumerate(test_all_df.iteritems()):
-            if series.dtype is object or str(series.dtype) == "object":
-                print "AFter convert types {0} is still an object".format(column)
-                if len(series.dropna()) > 0:
-                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
-                del test_all_df[column]
-        # read in the training features remove bad columns
-        try:
-            all_df = read_dataframe("features_{0}".format(learned_class_name), store)
-        except Exception as e:
-            all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
-        for i, (column, series) in enumerate(all_df.iteritems()):
-            if series.dtype is object or str(series.dtype) == "object":
-                print "AFter convert types {0} is still an object".format(column)
-                if len(series.dropna()) > 0:
-                    print "is all nan and not 0:  {0}".format(len(series.dropna()))
-                del all_df[column]
-        # This should normalize the features used for learning columns with the features used for predicting
-        for column in all_df.columns:
-            if column not in test_all_df.columns:
-                test_all_df[column] = pd.Series(index=all_df.index)
-        for column in test_all_df.columns:
-            if column not in all_df.columns:
-                del test_all_df[column]
-        # re-index with the columns from the learned features to establish proper ordering
-        test_all_df = test_all_df.reindex(columns=all_df.columns)
-        # remove all the columns that we might have, this is an expirement, not sure I need to remove anything
-        # but the one I am targeting
-        for col in features_to_remove:
-            if col in test_all_df.columns:
-                del test_all_df[col]
-        expectations, max_probs = get_predictions(cfr, test_all_df)
-        # create expectations df and output
-        expect_df = pd.DataFrame(expectations)
-        expect_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-        expect_df.to_csv('expecations_{0}.csv'.format(learned_class_name))
-        # create max_probability df and output
-        max_prob_df = pd.DataFrame(max_probs)
-        max_prob_df.set_index('flight_history_id', inplace=True, verify_integrity=True)
-        max_prob_df.to_csv('max_prob_{0}.csv'.format(learned_class_name))
+        predict(learned_class_name, features_to_remove, store)
     elif kind == "finalize_output":
-        # load in the predictions
-        gate_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("gate_arrival_diff"), index_col=0)
-        runway_arrival_expectations = pd.read_csv('expectations_{0}.csv'.format("runway_arrival_diff"), index_col=0)
-        print "len(gate_arrival_expectations):{0} should equal len(runway_arrival_expectations) {1}".format(len(gate_arrival_expectations.index), len(runway_arrival_expectations.index))
-        # join them together
-        all_expectations = gate_arrival_expectations.join(runway_arrival_expectations)
-        # create new coumns for the values we want
-        all_expectations['actual_gate_arrival'] = np.nan
-        all_expectations['actual_runway_arrival'] = np.nan
-        all_expectations['midnight_time'] = np.nan 
-        # find out what day the fligh_history_ids are from, so we know midnight
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
-            store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            subdir_date = datetime.datetime.strptime(subdirname, "%Y_%m_%d")
-            midnight_time = datetime.datetime(subdir_date.year, subdir_date.month, subdir_date.day, tzinfo=tz.tzutc())
-            df = get_joined_data(data_prefix, data_rev_prefix, subdirname, store_filename)
-            # get the intersection of the ids in our expectations and the current df
-            intersection = all_expectations & df
-            # loop through teh intersection and compute minutes after midnight, store it in the columns we created
-            for ix, row in all_expectations.ix[intersection]:
-                #df[learned_class_name] = df[actual_class] - df[scheduled_class]
-                # so df[actual_class] = df[learned_class_name] + df[scheduled_class]
-                row['actual_gate_arrival'] = minutes_difference(df.ix[ix]['scheduled_gate_arrival'], midnight_time) + row['gate_arrival_diff_expectation']
-                row['actual_runway_arrival'] = minutes_difference(df.ix[ix]['scheduled_runway_arrival'], midnight_time) + row['runway_arrival_diff_expectation']
-                row['midnight_time'] = midnight_time
-        # output the final format
-        all_expectations.to_csv("expectations_solution_combined.csv", cols= ['actual_gate_arrival', 'actual_runway_arrival', 'midnight_time', 'scheduled_gate_arrival', 'scheduled_runway_arrival'], index_label="flight_history_id",)
+        finalize(store_filename, data_prefix, data_rev_prefix, test_data_rev_prefix)
+
+
+
+
+
+
+
+
+
+
 
 
 

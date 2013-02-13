@@ -1437,6 +1437,14 @@ def concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_pre
     store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
     write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
 
+def generate_features(learned_class_name, store):
+    unique_cols = {}
+    all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)
+    unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
+    all_df = process_into_features(all_df, unique_cols)
+    all_df.to_csv("features_{0}.csv".format(learned_class_name))
+    store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
+    write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
 
 if __name__ == '__main__':
@@ -1474,13 +1482,7 @@ if __name__ == '__main__':
         all_dfs = None
         concat_predict(learned_class_name, store, pd, data_prefix, test_data_rev_prefix, all_dfs)
     elif kind == "generate_features":
-        unique_cols = {}
-        all_df = read_dataframe("all_joined_{0}".format(learned_class_name), store)
-        unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
-        all_df = process_into_features(all_df, unique_cols)
-        all_df.to_csv("features_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
-        write_dataframe("features_{0}".format(learned_class_name), all_df, store)
+        generate_features(learned_class_name, store, pd)
     elif kind == "generate_features_predict":
         unique_cols = {}
         store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
@@ -1532,7 +1534,7 @@ if __name__ == '__main__':
         print "MSE for {0}: {1}".format(arrival_column, summer/float(len(expectations)))
     elif kind == "learn":
         print "reading features from store"
-        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=1000)
+        all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=10000)
         for i, (column, series) in enumerate(all_df.iteritems()):
             if series.dtype is object or str(series.dtype) == "object":
                 print "AFter convert types {0} is still an object".format(column)
@@ -1626,6 +1628,8 @@ if __name__ == '__main__':
                 row['midnight_time'] = midnight_time
         # output the final format
         all_expectations.to_csv("expectations_solution_combined.csv", cols= ['actual_gate_arrival', 'actual_runway_arrival', 'midnight_time', 'scheduled_gate_arrival', 'scheduled_runway_arrival'], index_label="flight_history_id",)
+
+
 
 
 

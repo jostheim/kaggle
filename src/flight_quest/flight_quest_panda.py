@@ -1612,7 +1612,7 @@ def learn(learned_class_name):
     print len(targets.index)
     targets = targets.apply(lambda x:myround(x, base=1))
     features = all_df
-    print len(targets.index), len(features.index) # remove the target from the features
+    print len(targets.index), len(features.index), len(features.columns) # remove the target from the features
     del features[learned_class_name]
     cfr = random_forest_learn(targets, features)
     pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))

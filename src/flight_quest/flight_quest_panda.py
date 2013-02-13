@@ -1512,8 +1512,6 @@ def test(learned_class_name, store):
     if "ind" in all_df.columns:
         del all_df["ind"]
     # load the model
-    print "reading model"
-    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
     test_all_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), index_col=0)
     # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
@@ -1533,6 +1531,8 @@ def test(learned_class_name, store):
     # features we want to test are the ones in the test file
     features = test_all_df.ix[test_df.index]
     # predict
+    print "reading model"
+    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     summer = 0.0
     for i, (ix, row) in enumerate(test_df.iterrows()):

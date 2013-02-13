@@ -1560,8 +1560,8 @@ if __name__ == '__main__':
         targets = all_df[learned_class_name].dropna()
         # may want to rebin here, rounding to 5 minutes
         targets = targets.apply(lambda x: myround(x, base=1))
-        print targets
-        features = all_df.ix[all_df[learned_class_name].dropna().index]
+        features = all_df.ix[targets.index]
+        print len(targets.index), len(features.index)
         # remove the target from the features
         del features[learned_class_name]
         cfr = random_forest_learn(targets, features)

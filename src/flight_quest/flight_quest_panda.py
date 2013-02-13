@@ -1535,7 +1535,9 @@ def test(learned_class_name, store):
     print "reading model"
     cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) 
     cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
+    print "predicting"
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
+    print "computing stats"
     summer = 0.0
     for i, (ix, row) in enumerate(test_df.iterrows()):
         midnight_time = row['midnight_time']

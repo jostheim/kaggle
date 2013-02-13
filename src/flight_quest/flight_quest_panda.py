@@ -1442,7 +1442,7 @@ def concat_features(random, learned_class_name, data_prefix, data_rev_prefix, au
     
     for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname)å)
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)

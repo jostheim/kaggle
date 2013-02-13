@@ -1533,7 +1533,8 @@ def test(learned_class_name, store):
     features = test_all_df.ix[test_df.index]
     # predict
     print "reading model"
-    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) # load the features to predict
+    cfr = pickle.load(open("cfr_model_{0}.p".format(learned_class_name), 'rb')) 
+    cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
     expectations, max_likes = get_predictions(cfr, features) # loop through test_df and compute the difference b/t actual and expected
     summer = 0.0
     for i, (ix, row) in enumerate(test_df.iterrows()):

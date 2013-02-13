@@ -1310,8 +1310,9 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
         all_flight_histories = store['flight_histories']
     for ix, row in all_df.iterrows():
         # get scheduled departure
-        pass
-        
+        all_flight_history_row = all_flight_histories.ix[ix]
+        if all_flight_history_row['scheduled_runway_departure'] is not np.nan:
+            pass
     
 
 def build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
@@ -1509,7 +1510,7 @@ def cross_validate(learned_class_name, store):
     print "MSE for {0}: {1}".format(arrival_column, summer / float(len(expectations)))
 
 def learn(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=2000)
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
     for i, (column, series) in enumerate(all_df.iteritems()):
         if series.dtype is object or str(series.dtype) == "object":
             print "AFter convert types {0} is still an object".format(column)

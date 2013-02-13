@@ -1425,9 +1425,9 @@ if __name__ == '__main__':
             all_dfs = concat(data_prefix, data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
         for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
             all_dfs = concat(data_prefix, augmented_data_rev_prefix, subdirname, all_dfs, unique_columns, sample_size=sample_size)
-        all_dfs.to_csv("all_features_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('all_features_{0}.h5'.format(learned_class_name))
-        write_dataframe("all_features_{0}".format(learned_class_name), all_dfs, store)
+        all_dfs.to_csv("all_joined_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('all_joined_{0}.h5'.format(learned_class_name))
+        write_dataframe("all_joined_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_features":
         all_dfs = None
         for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
@@ -1461,9 +1461,9 @@ if __name__ == '__main__':
         for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
             include_df = pd.read_csv('{0}{1}/test_flights_combined.csv'.format(data_prefix, test_data_rev_prefix), index_col=0)
             all_dfs = concat(data_prefix, test_data_rev_prefix, subdirname, all_dfs, unique_columns, include_df=include_df, prefix="predict_")
-        all_dfs.to_csv("predict_features_{0}.csv".format(learned_class_name))
-        store = pd.HDFStore('predict_all_features_{0}.h5'.format(learned_class_name))
-        write_dataframe("predict_all_features_{0}".format(learned_class_name), all_dfs, store)
+        all_dfs.to_csv("predict_all_joined_{0}.csv".format(learned_class_name))
+        store = pd.HDFStore('predict_all_joined_{0}.h5'.format(learned_class_name))
+        write_dataframe("predict_all_joined_{0}".format(learned_class_name), all_dfs, store)
     elif kind == "concat_cross_validate":
         train_all_df = read_dataframe("all_joined", store)
         all_dfs = None
@@ -1487,9 +1487,9 @@ if __name__ == '__main__':
     elif kind == "generate_features_predict":
         unique_cols = {}
         try:
-            all_df = read_dataframe("predict_all_features_{0}".format(learned_class_name), store)
+            all_df = read_dataframe("predict_all_joined_{0}".format(learned_class_name), store)
         except Exception as e:
-            all_df = pd.read_csv("predict_all_features_{0}.csv".format(learned_class_name), index_col=0)
+            all_df = pd.read_csv("predict_all_joined_{0}.csv".format(learned_class_name), index_col=0)
         unique_cols = get_unique_values_for_categorical_columns(all_df, unique_cols)
         all_df = process_into_features(all_df, unique_cols)
         all_df.to_csv("predict_features_{0}.csv".format(learned_class_name))

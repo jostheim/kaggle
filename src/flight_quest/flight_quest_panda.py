@@ -1761,7 +1761,7 @@ if __name__ == '__main__':
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "cross_validate":
-        
+        cross_validate(learned_class_name)
     elif kind == "test":
         test(learned_class_name, store)
     elif kind == "learn":

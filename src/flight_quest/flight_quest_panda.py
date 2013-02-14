@@ -1223,7 +1223,7 @@ def random_forest_cross_validate(targets, features):
 #        for j, tup in enumerate(features_list):
 #            print j, tup
         unique_classes = sorted(cfr.classes_)
-        mean_diff = get_metric(cfr, features, testcv, unique_classes)
+        mean_diff = get_metric(cfr, features, testcv)
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)
 

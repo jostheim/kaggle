@@ -1168,7 +1168,7 @@ def get_predictions(cfr, features):
         expectation = np.sum(unique_classes*p[k])
         expectations.append({'flight_history_id':ix, '{0}_expectation'.format(learned_class_name):expectation})
         max_prob.append({'flight_history_id':ix, '{0}_max_prob'.format(learned_class_name):predicted[k]})
-        print expectation, predicted[k]
+        print "get_predictions", expectation, predicted[k]
     return expectations, max_prob
 
 def get_metric(cfr, features, targets):
@@ -1528,12 +1528,15 @@ def test(learned_class_name, store):
         if column not in all_df.columns:
             print column
     print len(test_features_df.columns)
+    # ensure columns are in same order as training
+    test_features_df = test_features_df.reindex(columns=all_df.columns) 
+    for i, col in enumerate(test_features_df.columns):
+        if col != all_df.columns[i]:
+            print "columns don't match after reindex", col
     # map the learned_class_name to the test_class for comparison
     arrival_column = "actual_gate_arrival"
     if learned_class_name == "diff_runway_arrival":
         arrival_column = "actual_runway_arrival"
-    # ensure columns are in same order as training
-    test_features_df = test_features_df.reindex(columns=all_df.columns) 
     # features we want to test are the ones in the test file
     features = test_features_df.ix[test_df.index]
     # predict

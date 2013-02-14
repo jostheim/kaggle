@@ -1095,7 +1095,7 @@ def process_into_features(df, unique_cols, multi=True):
     results = []
     update = len(df.columns)/10
     for i, (column, series) in enumerate(df.iteritems()):
-        if update%i == 0:
+        if i%update == 0:
             print "Done with {0}/{1} columns".format(i/len(df.columns))
         if "estimated_gate_arrival" in column or "estimated_runway_arrival" in column:
             # this fixes a mistake not setting something to np.nan when parsing

@@ -1527,7 +1527,6 @@ def test(learned_class_name, store):
     for column in test_features_df.columns:
         if column not in all_df.columns:
             print column
-    del test_features_df[learned_class_name]
     print len(test_features_df.columns)
     # map the learned_class_name to the test_class for comparison
     arrival_column = "actual_gate_arrival"

@@ -915,7 +915,6 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
 #            return None
     if df is None:
         print "Working on {0}".format(date_prefix)
-        asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
 #        print asdi_merged['estimateddepartureutc_diff'].dropna()
         df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
         events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)

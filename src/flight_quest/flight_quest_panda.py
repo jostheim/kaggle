@@ -1423,7 +1423,7 @@ def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
 def build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
     pool_queue = []
-    pool = Pool(processes=2)
+    pool = Pool(processes=4)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)

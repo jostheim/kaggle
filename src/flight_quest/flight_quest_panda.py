@@ -1515,6 +1515,7 @@ def test(learned_class_name, store):
     print "reading testing features from store "
     test_features_df = pd.read_csv("predict_features_{0}.csv".format(learned_class_name), nrows=10)
     test_features_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    del test_features_df[learned_class_name]
     # This should normalize the features used for learning columns with the features used for predicting
     for column in all_df.columns:
         if column not in test_features_df.columns:
@@ -1612,8 +1613,8 @@ def learn(learned_class_name):
     print len(targets.index)
     targets = targets.apply(lambda x:myround(x, base=1))
     features = all_df
-    print len(targets.index), len(features.index), len(features.columns) # remove the target from the features
     del features[learned_class_name]
+    print len(targets.index), len(features.index), len(features.columns) # remove the target from the features
     cfr = random_forest_learn(targets, features)
     pickle.dump(cfr, open("cfr_model_{0}.p".format(learned_class_name), 'wb'))
 

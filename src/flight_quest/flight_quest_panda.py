@@ -558,7 +558,7 @@ def get_asdi_root(data_prefix, data_rev_prefix, date_prefix):
     asdi_root_df['estimateddepartureutc_diff'] = asdi_root_df['estimateddepartureutc'] - asdi_root_df['originaldepartureutc'] 
 #    print asdi_root_df['estimateddepartureutc_diff'].dropna()
     asdi_root_df['estimateddepartureutc_diff'] =  asdi_root_df['estimateddepartureutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
-    print asdi_root_df['estimateddepartureutc_diff'].dropna()
+#    print asdi_root_df['estimateddepartureutc_diff'].dropna()
     asdi_root_df['estimatedarrivalutc_diff'] = asdi_root_df['estimatedarrivalutc'] - asdi_root_df['originalarrivalutc'] 
     asdi_root_df['estimatedarrivalutc_diff'] =  asdi_root_df['estimatedarrivalutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     return asdi_root_df

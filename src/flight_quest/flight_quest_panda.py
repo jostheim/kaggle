@@ -554,9 +554,9 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
 def get_asdi_root(data_prefix, data_rev_prefix, date_prefix): 
     asdi_root_filename = "{0}{1}/{2}/ASDI/asdiflightplan.csv".format(data_prefix, data_rev_prefix, date_prefix)
     asdi_root_df = pd.read_csv(asdi_root_filename, na_values=na_values, index_col=['asdiflightplanid'], parse_dates=[1,7,8,9,10], date_parser=parse_date_time)
-    print asdi_root_df['estimateddepartureutc'].dropna()
+#    print asdi_root_df['estimateddepartureutc'].dropna()
     asdi_root_df['estimateddepartureutc_diff'] = asdi_root_df['estimateddepartureutc'] - asdi_root_df['originaldepartureutc'] 
-    print asdi_root_df['estimateddepartureutc_diff'].dropna()
+#    print asdi_root_df['estimateddepartureutc_diff'].dropna()
     asdi_root_df['estimateddepartureutc_diff'] =  asdi_root_df['estimateddepartureutc_diff'].apply(lambda x: x.days*24*60+x.seconds/60 if type(x) is datetime.timedelta else np.nan)
     print asdi_root_df['estimateddepartureutc_diff'].dropna()
     asdi_root_df['estimatedarrivalutc_diff'] = asdi_root_df['estimatedarrivalutc'] - asdi_root_df['originalarrivalutc'] 
@@ -916,6 +916,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     if df is None:
         print "Working on {0}".format(date_prefix)
         asdi_merged = get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time) 
+        print asdi_merged['estimateddepartureutc_diff'].dropna()
         df = get_flight_history(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
         events = get_flight_history_events(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)
         asdi_disposition = get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=cutoff_time)

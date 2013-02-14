@@ -1393,7 +1393,7 @@ def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
         df = df.ix[include_df.index]
         for ix, row in df.iterrows():
             if ix not in data:
-                data[ix] = {'flight_history_id':ix, "midnight_time":midnight_time, "scheduled_gate_arrival":row['scheduled_gate_arrival'], "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
+                data[ix] = {'flight_history_id':ix, "midnight_time":midnight_time, "scheduled_runway_arrival":include_df.ix[ix]['scheduled_runway_arrival'], "scheduled_gate_arrival":include_df.ix[ix]['scheduled_gate_arrival'], "actual_runway_arrival":np.nan, "actual_gate_arrival":np.nan}
                 if row['actual_runway_arrival'] is not np.nan:
                     data[ix]["actual_runway_arrival"] = minutes_difference(row['actual_runway_arrival'], midnight_time)
                 if row['actual_gate_arrival'] is not np.nan:

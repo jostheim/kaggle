@@ -1188,7 +1188,7 @@ def random_forest_learn(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=8,
+        n_jobs=6,
         random_state=0,
         )
     cfr.fit(features, targets)
@@ -1205,7 +1205,7 @@ def random_forest_cross_validate(targets, features):
         max_features=None,
         verbose=2,
         compute_importances=True,
-        n_jobs=6,
+        n_jobs=8,
         random_state=0,
         )
         print "Fitting cross validation #{0}".format(i)

@@ -510,8 +510,7 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
     if cutoff_time is not None:
         events_df = events_df[events_df['date_time_recorded'] < cutoff_time]
     cast_date_columns(events_df, flight_history_events_date_cols)
-    events_df["estimated_gate_arrival"] = np.nan
-    events_df["estimated_runway_arrival"] = np.nan
+    add = []
     
     for ix, row in events_df.iterrows():
         if row['flight_history_id'] not in flight_history_df.index:
@@ -522,9 +521,11 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
         estimated_gate_arrival = parse_estimated_gate_arrival(row["data_updated"], fh_row['arrival_airport_timezone_offset'])
         estimated_runway_arrival = parse_estimated_runway_arrival(row['data_updated'], fh_row['arrival_airport_timezone_offset'])
 #        print estimated_gate_arrival, estimated_runway_arrival
-        row["estimated_gate_arrival"] = estimated_gate_arrival
-        row["estimated_runway_arrival"] = estimated_runway_arrival
-    
+        add.append({"index":ix, "estimated_gate_arrival":estimated_gate_arrival, 'estimated_runway_arrival':estimated_runway_arrival})
+
+    add_df = pd.DataFrame(add)
+    add_df.set_index("index", inplace=True, verify_integrity=True)
+    events_df = events_df.join(add_df)    
     print  "events estimated_gate_arrival ",len(events_df["estimated_gate_arrival"].dropna())
     print  "events estimated_runway_arrival ",len(events_df["estimated_runway_arrival"].dropna())
     

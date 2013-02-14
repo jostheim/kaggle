@@ -519,7 +519,7 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
         if type(row["data_updated"]) != str:
             continue
         print "setting estimated dates"
-        fh_row = flight_history_df.ix[ix]
+        fh_row = flight_history_df.ix[row['flight_history_id']]
         estimated_gate_arrival = parse_estimated_gate_arrival(row["data_updated"], fh_row['arrival_airport_timezone_offset'])
         estimated_runway_arrival = parse_estimated_runway_arrival(row['data_updated'], fh_row['arrival_airport_timezone_offset'])
         events_df["estimated_gate_arrival"][ix] = estimated_gate_arrival

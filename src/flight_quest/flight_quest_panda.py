@@ -1033,12 +1033,12 @@ def process_column_into_features(unique_cols, column, series, scheduled_gate_arr
         dtype_tmp = get_column_type(series)
         if dtype_tmp is datetime.datetime:
 #            print "datetime column: ", column
-            columns['{0}_weekday'.format(column)] = series.apply(lambda x:x.weekday() if type(x) is datetime.datetime else np.nan)
-            columns['{0}_day'.format(column)] = series.apply(lambda x:x.day if type(x) is datetime.datetime else np.nan)
-            columns['{0}_hour'.format(column)] = series.apply(lambda x:x.hour if type(x) is datetime.datetime else np.nan)
-            columns['{0}_minute'.format(column)] = series.apply(lambda x:x.minute if type(x) is datetime.datetime else np.nan) # get the diff relative to a zero-point
+            columns['{0}_weekday'.format(column)] = series.apply(lambda x:x.weekday() if type(x) is datetime.datetime else x)
+            columns['{0}_day'.format(column)] = series.apply(lambda x:x.day if type(x) is datetime.datetime else x)
+            columns['{0}_hour'.format(column)] = series.apply(lambda x:x.hour if type(x) is datetime.datetime else x)
+            columns['{0}_minute'.format(column)] = series.apply(lambda x:x.minute if type(x) is datetime.datetime else x) # get the diff relative to a zero-point
             columns['{0}_diff'.format(column)] = scheduled_runway_departure - series # set the diff to be in minutes
-            columns['{0}_diff'.format(column)] = columns['{0}_diff'.format(column)].apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else np.nan)
+            columns['{0}_diff'.format(column)] = columns['{0}_diff'.format(column)].apply(lambda x:x.days * 24 * 60 + x.seconds / 60 if type(x) is datetime.timedelta else x)
                 # delete the original
             if column != "scheduled_runway_departure" and column != "scheduled_gate_arrival" and column != "scheduled_runway_arrival":
                 columns_to_delete.append(column)
@@ -1474,7 +1474,7 @@ def concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_
     all_dfs = None
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1487,7 +1487,7 @@ def concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_
     
     for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
         print "Working on {0}".format(subdirname)
-        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname))
+        df_tmp = pd.read_csv("{0}features_{1}.csv".format("", subdirname), index_col=0)
         if sample_size is not None:
             samples = sample_size
             rows = random.sample(df_tmp.index, samples)
@@ -1498,7 +1498,7 @@ def concat_features(learned_class_name, data_prefix, data_rev_prefix, augmented_
             all_dfs = all_dfs.append(df_tmp)
         print "new length {0}".format(all_dfs)
     
-    all_dfs.to_csv("features_{0}.csv".format(learned_class_name), index_label="ind")
+    all_dfs.to_csv("features_{0}.csv".format(learned_class_name), index_label="flight_history_id")
 
 def concat_predict(learned_class_name, store, data_prefix, test_data_rev_prefix, all_dfs):
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
@@ -1520,11 +1520,7 @@ def generate_features(learned_class_name, store):
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
 def cross_validate(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000) 
-    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
-    # fix screw up with index column
-    if "ind" in all_df.columns:
-        del all_df["ind"]
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=5000) 
     print learned_class_name
     print all_df
     series = all_df[learned_class_name]

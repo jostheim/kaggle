@@ -1501,9 +1501,8 @@ def generate_features(learned_class_name, store):
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
 def cross_validate(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=5000) 
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
-    del all_df[learned_class_name]
     # fix screw up with index column
     if "ind" in all_df.columns:
         del all_df["ind"]

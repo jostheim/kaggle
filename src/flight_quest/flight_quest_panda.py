@@ -896,7 +896,7 @@ def get_for_flights(df, data_prefix, data_rev_prefix, date_prefix, cutoff_time =
     return (arrival_ground_delays_df, arrival_delays_df, arrival_icing_delays_df, departure_ground_delays_df, departure_delays_df, departure_icing_delays_df)
 
 
-def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False, prefix="", cutoff_time = None, generate_features=None, unique_cols={}, sample_size=sample_size):
+def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, force=False, prefix="", cutoff_time = None, generate_features=None, unique_cols={}, sample_size=None):
     try:
         store = pd.HDFStore(prefix+store_filename)
     except Exception as e:

@@ -523,7 +523,10 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
         estimated_runway_arrival = parse_estimated_runway_arrival(row['data_updated'], fh_row['arrival_airport_timezone_offset'])
         events_df["estimated_gate_arrival"][ix] = estimated_gate_arrival
         events_df["estimated_runway_arrival"][ix] = estimated_runway_arrival
-        
+    
+    print  "events estimated_gate_arrival ",len(events_df["estimated_gate_arrival"].dropna())
+    print  "events estimated_runway_arrival ",len(events_df["estimated_runway_arrival"].dropna())
+    
     grouped = events_df.groupby("flight_history_id")
     groups = []
     i = 0

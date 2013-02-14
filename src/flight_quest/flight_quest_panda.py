@@ -506,7 +506,7 @@ def parse_estimated_runway_arrival(val, offset):
 
 def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None):
     events_filename = "{0}{1}/{2}/FlightHistory/flighthistoryevents.csv".format(data_prefix, data_rev_prefix, date_prefix)
-    events_df = pd.read_csv(events_filename, na_values=na_values, parse_dates=[1], date_parser=parse_date_time)
+    events_df = pd.read_csv(events_filename, index_col=0, na_values=na_values, parse_dates=[1], date_parser=parse_date_time)
     if cutoff_time is not None:
         events_df = events_df[events_df['date_time_recorded'] < cutoff_time]
     cast_date_columns(events_df, flight_history_events_date_cols)

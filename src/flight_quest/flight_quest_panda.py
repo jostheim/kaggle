@@ -1500,10 +1500,30 @@ def generate_features(learned_class_name, store):
     store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
+def cross_validate(learned_class_name):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
+    all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    del all_df[learned_class_name]
+    # fix screw up with index column
+    if "ind" in all_df.columns:
+        del all_df["ind"]
+    print learned_class_name
+    print all_df
+    series = all_df[learned_class_name]
+    series = series.dropna()
+    all_df = all_df.ix[series.index]
+    print len(all_df)
+    targets = series.dropna()
+    print len(targets.index)
+    targets = targets.apply(lambda x:myround(x, base=1))
+    features = all_df
+    del features[learned_class_name]
+    random_forest_cross_validate(targets, features)
+    
 def test(learned_class_name, store):
     print "reading testing truth data from store" # assumes model already learned
     # load the test truth data
-    test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[3], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
+    test_df = pd.read_csv("test_flights_combined.csv", index_col=0, parse_dates=[3,4,5], date_parser=parse_date_time) # we need the features we trained from, in order to normalize the columns
     # load the first row of the training features, so we get the columns
     print "reading training columns"
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
@@ -1740,6 +1760,8 @@ if __name__ == '__main__':
     elif kind == "uniques":
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
+    elif kind == "cross_validate":
+        
     elif kind == "test":
         test(learned_class_name, store)
     elif kind == "learn":

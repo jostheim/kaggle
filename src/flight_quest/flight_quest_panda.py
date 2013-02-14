@@ -952,6 +952,10 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
     
     if generate_features:
         print "generating features"
+        if sample_size is not None:
+            samples = sample_size
+            rows = random.sample(df.index, samples)
+            df = df.ix[rows]
         features_df = process_into_features(df, unique_cols, multi=False)
         features_df.to_csv("{0}features_{1}.csv".format(prefix, date_prefix))
     
@@ -980,10 +984,13 @@ def get_joined_data_proxy(args):
     unique_cols = {}
     if len(args) > 7:
         unique_cols = args[7]
+    sample_size = None
+    if len(args) > 8:
+        sample_size = args[8]
     print "date_prefix", date_prefix, "data_rev_prefix", data_rev_prefix, "date_prefix", date_prefix, "store_filename", store_filename, "prefix", prefix, "cutoff_time", cutoff_time, "generate_features", generate_features
     ret = False
     try:
-        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time, generate_features=generate_features, unique_cols=unique_cols)
+        df = get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, prefix=prefix, cutoff_time=cutoff_time, generate_features=generate_features, unique_cols=unique_cols, sample_size=sample_size)
         if df is not None:
             ret = True
     except Exception as e:
@@ -1420,19 +1427,19 @@ def build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
     new_df.to_csv("test_flights_combined.csv")
 
 
-def build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix):
+def build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size):
     unique_columns = pickle.load(open("unique_columns.p", 'rb'))
     pool_queue = []
     pool = Pool(processes=4)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, data_rev_prefix)).next()[1]:
         if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
+            pool_queue.append([data_prefix, data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns, sample_size])
     
     for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
         if not os.path.exists("{0}features_{1}.csv".format("", subdirname)):
             store_filename = 'flight_quest_{0}.h5'.format(subdirname)
-            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns])
+            pool_queue.append([data_prefix, augmented_data_rev_prefix, subdirname, store_filename, "", None, True, unique_columns, sample_size])
     
     results = pool.map(get_joined_data_proxy, pool_queue, 1)
     pool.terminate()
@@ -1751,7 +1758,7 @@ if __name__ == '__main__':
     elif kind == "build_test":
         build_test(data_prefix, test_data_training_rev_prefix, test_data_rev_prefix)
     elif kind == "build_multi_features":
-        build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
+        build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix, sample_size)
     elif kind == "build_predict":
         build_predict(store_filename, data_prefix, test_data_rev_prefix)
     elif kind == "concat":

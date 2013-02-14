@@ -1508,6 +1508,7 @@ def test(learned_class_name, store):
     print "reading training columns"
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1) 
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    del all_df[learned_class_name]
     # fix screw up with index column
     if "ind" in all_df.columns:
         del all_df["ind"]
@@ -1527,7 +1528,7 @@ def test(learned_class_name, store):
         if column not in all_df.columns:
             print column
     del test_features_df[learned_class_name]
-    
+    print len(test_features_df.columns)
     # map the learned_class_name to the test_class for comparison
     arrival_column = "actual_gate_arrival"
     if learned_class_name == "diff_runway_arrival":

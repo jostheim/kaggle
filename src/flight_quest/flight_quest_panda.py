@@ -479,7 +479,7 @@ def get_fbwind(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=No
 
 def parse_estimated_gate_arrival(val, offset):
     if val is None or val is np.nan or str(val) == "nan":
-        return None
+        return np.nan
     estimated_gate_arrival = get_estimated_gate_arrival_string(val)
     if estimated_gate_arrival is not None:
         if offset>0:
@@ -488,11 +488,11 @@ def parse_estimated_gate_arrival(val, offset):
             offset_str = str(offset)
         datetime_obj = dateutil.parser.parse(estimated_gate_arrival+offset_str)
         return datetime_obj
-    return None
+    return np.nan
 
 def parse_estimated_runway_arrival(val, offset):
     if val is None or val is np.nan or str(val) == "nan":
-        return None
+        return np.nan
     estimated_runway_arrival = get_estimated_runway_arrival_string(val)
     if estimated_runway_arrival is not None:
         if offset>0:
@@ -501,7 +501,7 @@ def parse_estimated_runway_arrival(val, offset):
             offset_str = str(offset)
         datetime_obj = dateutil.parser.parse(estimated_runway_arrival+offset_str)
         return datetime_obj
-    return None
+    return np.nan
 
 
 def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None):
@@ -521,7 +521,7 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
         fh_row = flight_history_df.ix[row['flight_history_id']]
         estimated_gate_arrival = parse_estimated_gate_arrival(row["data_updated"], fh_row['arrival_airport_timezone_offset'])
         estimated_runway_arrival = parse_estimated_runway_arrival(row['data_updated'], fh_row['arrival_airport_timezone_offset'])
-        print estimated_gate_arrival, estimated_runway_arrival
+#        print estimated_gate_arrival, estimated_runway_arrival
         row["estimated_gate_arrival"] = estimated_gate_arrival
         row["estimated_runway_arrival"] = estimated_runway_arrival
     

@@ -1174,7 +1174,7 @@ def get_predictions(cfr, features):
 def get_metric(cfr, features, targets):
     sum_diff = 0.0
     p = cfr.predict_proba(features)
-    unique_classes = sorted(cfr.classes_)
+    unique_classes = sorted(cfr.classes_[0])
     for k, target in enumerate(targets):
         # expectation across all classes
         expectation = np.sum(unique_classes*p[k])
@@ -1568,7 +1568,7 @@ def test(learned_class_name, store):
     summer = 0.0
     for i, (ix, row) in enumerate(test_features_df.iterrows()):
         midnight_time = test_df.ix[ix]['midnight_time']
-        predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]
+        predicted_arrival = minutes_difference(test_df.ix[ix]['scheduled_gate_arrival'], midnight_time) + expectations[i]['{0}_expectation'.format(learned_class_name)]
         actual_arrival = test_df.ix[ix][arrival_column]
         print predicted_arrival, actual_arrival
         summer += np.sqrt(np.power((actual_arrival - predicted_arrival), 2))

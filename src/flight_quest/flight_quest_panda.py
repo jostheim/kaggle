@@ -1521,7 +1521,7 @@ def generate_features(learned_class_name, store):
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
 def cross_validate(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=20000) 
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=25000) 
     print learned_class_name
     print all_df
     series = all_df[learned_class_name]

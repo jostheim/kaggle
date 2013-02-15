@@ -1231,6 +1231,7 @@ def random_forest_cross_validate(targets, features):
         print "Fitting cross validation #{0}".format(i)
         cfr.fit(features[traincv], targets[traincv])
         print "Scoring cross validation #{0}".format(i)
+        cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
 #        print "Features importance"

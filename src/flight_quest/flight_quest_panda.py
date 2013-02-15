@@ -1234,6 +1234,9 @@ def random_forest_cross_validate(targets, features):
         cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
+        mean_diff = get_metric(cfr, features[testcv], targets[testcv])
+        print "Mean difference: {0}".format(mean_diff)
+        results.append(mean_diff)
         print "Features importance"
         features_list = []
         for j, importance in enumerate(cfr.feature_importances_):
@@ -1244,9 +1247,9 @@ def random_forest_cross_validate(targets, features):
         for j, tup in enumerate(features_list):
             print j, tup
         pickle.dump(features_list, open("important_features.p", 'wb'))
-        mean_diff = get_metric(cfr, features[testcv], targets[testcv])
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)
+
 
     #print out the mean of the cross-validated results
     print "Results: " + str( np.array(results).mean() )

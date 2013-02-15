@@ -21,6 +21,7 @@ from sklearn import cross_validation
 import traceback
 
 random.seed(0)
+flatten_num = 500
 na_values = ["MISSING", "HIDDEN"]
 do_not_convert_to_date = ["icao_aircraft_type_actual"]
 global learned_class_name, actual_class, scheduled_class
@@ -251,7 +252,7 @@ def get_metar(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time = N
     #   print "switching"
         d = {'weather_station_code':name}
         group = group.sort_index(by='date_time_issued', ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
             prefix1 = k
             if k == 0:
                 prefix1 = "first"
@@ -290,7 +291,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
         dict = {}
     #   print "switching"
         dict = {'tafforecastid':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "tafforecastid":
@@ -308,7 +309,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
         dict = {}
     #   print "switching"
         dict = {'tafforecastid':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "tafforecastid":
@@ -326,7 +327,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
         dict = {}
     #   print "switching"
         dict = {'tafforecastid':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "tafforecastid":
@@ -344,7 +345,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
         dict = {}
     #   print "switching"
         dict = {'tafforecastid':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "tafforecastid":
@@ -363,7 +364,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
     #   print "switching"
         dict = {'tafid':int(name)}
         group = group.sort_index(by="forecasttimefromutc", ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "tafid":
@@ -384,7 +385,7 @@ def get_taf(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
     #   print "switching"
         dict = {'airport':name}
         group = group.sort_index(by="validtimefromutc", ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "airport":
@@ -420,7 +421,7 @@ def get_fbwind(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=No
     #   print "switching"
         d = {'fbwindreportid':int(name)}
         group = group.sort_index(by="ordinal", ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "fbwindreportid" and group.columns[j] != "ordinal":
@@ -436,7 +437,7 @@ def get_fbwind(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=No
     #   print "switching"
         d = {'fbwindairportid':int(name)}
         group = group.sort_index(by="ordinal", ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "fbwindairportid" and group.columns[j] != "ordinal":
@@ -462,7 +463,7 @@ def get_fbwind(prefix, data_prefix, data_rev_prefix, date_prefix, cutoff_time=No
     #   print "switching"
         d = {'airportcode':name}
         group = group.sort_index(by="createdutc", ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "airportcode":
@@ -536,7 +537,7 @@ def get_flight_history_events(flight_history_df, data_prefix, data_rev_prefix, d
         d = {}
         d = {'flight_history_id':int(name)}
         group = group.sort_index(by='date_time_recorded', ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
             prefix = k
             if k == 0:
                 prefix = "first"
@@ -602,7 +603,7 @@ def get_asdi_disposition(data_prefix, data_rev_prefix, date_prefix, cutoff_time=
     #   print "switching"
         d = {'flight_history_id':int(name)}
         group = group.sort_index(by='received', ascending=False)
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
             prefix = k
             if k == 0:
                 prefix = "first"
@@ -636,7 +637,7 @@ def get_asdi_merged(data_prefix, data_rev_prefix, date_prefix, cutoff_time=None)
     #   print "switching"
         #print group.index[n]
         #group = group.sort_index(by='ordinal')
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
             prefix = group.index[k][1]
             if k == 0:
                 prefix = "first"
@@ -716,7 +717,7 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_tim
         d = {}
     #   print "switching"
         d = {'ground_delay_program_id':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
             for j, val in enumerate(row):
                 if group.columns[j] != "ground_delay_program_id":
                     d["{0}_{1}".format(k, group.columns[j])] = val
@@ -736,7 +737,7 @@ def get_atscc_ground_delay(data_prefix, data_rev_prefix, date_prefix, cutoff_tim
         d = {}
     #   print "switching"
         d = {'ground_delay_program_id':int(name)}
-        for k, row in enumerate(group.values[0:100]):
+        for k, row in enumerate(group.values[0:flatten_num]):
     #        print row
             for j, val in enumerate(row):
                 if group.columns[j] != "ground_delay_program_id":

@@ -1197,6 +1197,7 @@ def get_metric(cfr, features, targets):
     for k, target in enumerate(targets):
         # expectation across all classes
         expectation = np.sum(unique_classes*p[k])
+        print expectation, target
         sum_diff += np.sqrt(np.power((expectation - target),2))
     mean_diff = sum_diff/float(len(targets))
     return mean_diff

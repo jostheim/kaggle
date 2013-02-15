@@ -1243,6 +1243,7 @@ def random_forest_cross_validate(targets, features):
         features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
         for j, tup in enumerate(features_list):
             print j, tup
+        pickle.dump(features_list, open("important_features.p", 'wb'))
         mean_diff = get_metric(cfr, features[testcv], targets[testcv])
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)

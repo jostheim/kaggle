@@ -913,7 +913,7 @@ def get_joined_data(data_prefix, data_rev_prefix, date_prefix, store_filename, f
             print "found {0}joined_{1} saved, returning".format(prefix, date_prefix)
         except Exception as e:
             print e
-#            return None
+            return None
     if df is None:
         print "Working on {0}".format(date_prefix)
 #        print asdi_merged['estimateddepartureutc_diff'].dropna()

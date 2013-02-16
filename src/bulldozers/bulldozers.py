@@ -86,7 +86,7 @@ def flatten_data_at_same_auction(df):
                 else:
                     flattened_df = flattened_df.append(t_df)
             if flattened_df is not None:
-                print "joining flattened", df
+                print "joining flattened", new_df
                 new_df = new_df.join(flattened_df)
         i += 1
         print "{0}/{1}".format(i, len(unique_sales_dates))

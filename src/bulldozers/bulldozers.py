@@ -53,9 +53,7 @@ def flatten(grouped, column_to_flatten, column_to_sort_flattening=None, index_to
                 break
         groups.append(d)
         i += 1
-    tmp_df = pd.DataFrame(groups)
-    tmp_df.set_index(column_to_flatten, inplace=True, verify_integrity=True)
-    return tmp_df
+    return groups
 
 
 def get_date_dataframe(date_column):
@@ -75,19 +73,21 @@ def flatten_data_at_same_auction(df):
         unique_states = np.unique(per_sale_df['state'])
         for state in unique_states:
             per_sale_df = per_sale_df[per_sale_df['state'] == state]
-            flattened_df = None
+            flattened_df = []
             grouped = per_sale_df.groupby('saledate')
             for k, (ix, row) in enumerate(per_sale_df.iterrows()):
                 print "flattening"
-                t_df = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
-                t_df['SalesID'] = ix
-                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
+                groups = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
+                groups['SalesID'] = ix
+#                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 if flattened_df is None:
-                    flattened_df = t_df
+                    flattened_df = groups
                 else:
-                    flattened_df = flattened_df.append(t_df)
+                    flattened_df += groups
                 print "inner: {0}/{1}".format(k, len(per_sale_df))
-            if flattened_df is not None:
+            if flattened_df is not None and len(flattened_df) > 0:
+                flattened_df = pd.DataFrame(flattened_df)
+                flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 print "joining flattened", new_df
                 new_df = new_df.join(flattened_df)
         i += 1

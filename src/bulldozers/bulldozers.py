@@ -29,8 +29,7 @@ def parse_date_time(val):
         return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
-def flatten(df, column_to_flatten, column_to_sort_flattening=None, index_to_ignore=None, max_number_to_flatten=None, prefix=""):
-    grouped = df.groupby(column_to_flatten)
+def flatten(grouped, column_to_flatten, column_to_sort_flattening=None, index_to_ignore=None, max_number_to_flatten=None, prefix=""):
     groups = []
     i = 0
     for name, group in grouped:
@@ -77,9 +76,10 @@ def flatten_data_at_same_auction(df):
         for state in unique_states:
             per_sale_df = per_sale_df[per_sale_df['state'] == state]
             flattened_df = None
+            grouped = per_sale_df.groupby('saledate')
             for k, (ix, row) in enumerate(per_sale_df.iterrows()):
                 print "flattening"
-                t_df = flatten(per_sale_df, 'saledate', 'YearMade', index_to_ignore=ix)
+                t_df = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
                 t_df['SalesID'] = ix
                 t_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 if flattened_df is None:

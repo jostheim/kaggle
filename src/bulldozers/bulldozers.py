@@ -29,7 +29,7 @@ def parse_date_time(val):
         return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
-def flatten(df, column_to_flatten, column_to_sort_flattening=None, max_number_to_flatten=None, prefix=""):
+def flatten(df, column_to_flatten, column_to_sort_flattening=None, index_to_ignore=None, max_number_to_flatten=None, prefix=""):
     grouped = df.groupby(column_to_flatten)
     groups = []
     i = 0
@@ -39,21 +39,25 @@ def flatten(df, column_to_flatten, column_to_sort_flattening=None, max_number_to
             group = group.sort_index(by=column_to_sort_flattening, ascending=False)
         if max_number_to_flatten is None:
             max_number_to_flatten = len(group.values)
-        for k, (ix,row) in enumerate(group.iterrows()[0:max_number_to_flatten]):
+        for k, (ix,row) in enumerate(group.iterrows()):
+            if index_to_ignore is not None and index_to_ignore == ix:
+                continue
             prefix1 = k
             if k == 0:
                 prefix1 = "first"
             if k == len(group.values)-1:
                 prefix1 = "last"
-            d["{0}{1}_{2}".format(prefix, prefix1, "index")] = ix
             for j, val in enumerate(row):
                 if group.columns[j] != column_to_flatten:
                     d["{0}{1}_{2}".format(prefix, prefix1, group.columns[j])] = val
+            if k > max_number_to_flatten:
+                break
         groups.append(d)
         i += 1
     tmp_df = pd.DataFrame(groups)
     tmp_df.set_index(column_to_flatten, inplace=True, verify_integrity=True)
     return tmp_df
+
 
 def get_date_dataframe(date_column):
     return pd.DataFrame({
@@ -62,17 +66,6 @@ def get_date_dataframe(date_column):
         "SaleDay": [d.day for d in date_column],
         "SaleDayOfWeek": [d.weekday for d in date_column]
         }, index=date_column.index)
-
-def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
-    for col in columns:
-        if train[col].dtype == np.dtype('object'):
-            s = np.unique(train[col].values)
-            mapping = pd.Series([x[0] for x in enumerate(s)], index = s)
-            train_fea = train_fea.join(train[col].map(mapping))
-            test_fea = test_fea.join(test[col].map(mapping))
-        else:
-            train_fea = train_fea.join(train[col])
-            test_fea = test_fea.join(test[col])
 
 def flatten_data_at_same_auction(df):
     unique_sales_dates = np.unique(df['saledate'])
@@ -92,6 +85,19 @@ def flatten_data_at_same_auction(df):
                 flattened_df = flattened_df.append(t_df)
         df = df.join(flattened_df)
 
+def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
+    for col in columns:
+        if train[col].dtype == np.dtype('object'):
+            s = np.unique(train[col].values)
+            mapping = pd.Series([x[0] for x in enumerate(s)], index = s)
+#            print mapping
+            train_fea = train_fea.join(train[col].map(mapping))
+            test_fea = test_fea.join(test[col].map(mapping))
+        else:
+            train_fea = train_fea.join(train[col])
+            test_fea = test_fea.join(test[col])
+    return train_fea, test_fea
+
 
 if __name__ == '__main__':
     store = pd.HDFStore('bulldozers.h5')
@@ -102,19 +108,22 @@ if __name__ == '__main__':
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
                        converters={"saledate": dateutil.parser.parse})
     
+    train.fillna("NaN", inplace=True)
+    test.fillna("NaN", inplace=True)
+    
     train_fea = get_date_dataframe(train["saledate"])
     test_fea = get_date_dataframe(test["saledate"])
     
     columns = set(train.columns)
     columns.remove("SalesID")
     columns.remove("SalePrice")
-    columns.remove("saledate")
+#    columns.remove("saledate")
     
-    convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    flatten_data_at_same_auction(train_fea)
+    train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
+    train_fea = flatten_data_at_same_auction(train_fea)
     train_fea.to_csv("train.csv")
     train = None
-    flatten_data_at_same_auction(test_fea)
+    test_fea = flatten_data_at_same_auction(test_fea)
     test_fea.to_csv("test.csv")
     test = None
     

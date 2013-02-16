@@ -64,13 +64,14 @@ def get_date_dataframe(date_column):
         "SaleYear": [d.year for d in date_column],
         "SaleMonth": [d.month for d in date_column],
         "SaleDay": [d.day for d in date_column],
-        "SaleDayOfWeek": [d.weekday for d in date_column]
+        "SaleDayOfWeek": [d.weekday() for d in date_column]
         }, index=date_column.index)
 
 def flatten_data_at_same_auction(df):
     unique_sales_dates = np.unique(df['saledate'])
     i = 0
     new_df = df.copy(True)
+    new_df.set_index('SalesID', inplace=True, verify_integrity=True)
     for sale_date in unique_sales_dates:
         per_sale_df = df[df['saledate'] == sale_date]
         unique_states = np.unique(per_sale_df['state'])
@@ -79,7 +80,6 @@ def flatten_data_at_same_auction(df):
             flattened_df = []
             grouped = per_sale_df.groupby('saledate')
             for k, (ix, row) in enumerate(per_sale_df.iterrows()):
-                print "flattening"
                 groups = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
                 for group in groups:
                     group['SalesID'] = ix

@@ -127,7 +127,7 @@ if __name__ == '__main__':
     test_fea = get_date_dataframe(test["saledate"])
     
     columns = set(train.columns)
-    columns.remove("SalesID")
+#    columns.remove("SalesID")
     columns.remove("SalePrice")
 #    columns.remove("saledate")
     

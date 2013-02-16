@@ -85,6 +85,8 @@ def flatten_data_at_same_auction(df):
                 else:
                     flattened_df = flattened_df.append(t_df)
             df = df.join(flattened_df)
+        i += 1
+        print "{0}/{1}".format(i, len(unique_sales_dates))
 
 def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
     for col in columns:

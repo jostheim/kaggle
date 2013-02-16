@@ -72,18 +72,19 @@ def flatten_data_at_same_auction(df):
     i = 0
     for sale_date in unique_sales_dates:
         per_sale_df = df[df['saledate'] == sale_date]
-        if len(np.unique(per_sale_df['state'])) > 1:
-            print "uhoh", len(np.unique(per_sale_df['state']))
-        flattened_df = None
-        for ix, row in per_sale_df.iterrows():
-            t_df = flatten(per_sale_df, 'saledate', 'YearMade', index_to_ignore=ix)
-            t_df['SalesID'] = ix
-            t_df.set_index('SalesID', inplace=True, verify_integrity=True)
-            if flattened_df is None:
-                flattened_df = t_df
-            else:
-                flattened_df = flattened_df.append(t_df)
-        df = df.join(flattened_df)
+        unique_states = np.unique(per_sale_df['state'])
+        for state in unique_states:
+            per_sale_df = per_sale_df[per_sale_df['state'] == state]
+            flattened_df = None
+            for ix, row in per_sale_df.iterrows():
+                t_df = flatten(per_sale_df, 'saledate', 'YearMade', index_to_ignore=ix)
+                t_df['SalesID'] = ix
+                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
+                if flattened_df is None:
+                    flattened_df = t_df
+                else:
+                    flattened_df = flattened_df.append(t_df)
+            df = df.join(flattened_df)
 
 def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
     for col in columns:

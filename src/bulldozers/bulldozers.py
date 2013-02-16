@@ -98,7 +98,7 @@ if __name__ == '__main__':
     store_filename = 'bulldozers.h5'
     data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
-                        converters={"saledate": dateutil.parser.parse}))
+                        converters={"saledate": dateutil.parser.parse})
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
                        converters={"saledate": dateutil.parser.parse})
     

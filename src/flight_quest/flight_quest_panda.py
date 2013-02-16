@@ -1324,13 +1324,14 @@ def add_previous_flights_features(learned_class_name, data_prefix, data_rev_pref
             else:
                 all_flight_histories.append(df)
                 all_flight_histories.drop_duplicates(take_last=True, inplace=True)
-        for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
-            df = get_flight_history(data_prefix, augmented_data_rev_prefix, subdirname)
-            if all_flight_histories is None:
-                all_flight_histories = df
-            else:
-                all_flight_histories.append(df)
-                all_flight_histories.drop_duplicates(take_last=True, inplace=True)
+        if augmented_data_rev_prefix is not None:
+            for subdirname in os.walk('{0}{1}'.format(data_prefix, augmented_data_rev_prefix)).next()[1]:
+                df = get_flight_history(data_prefix, augmented_data_rev_prefix, subdirname)
+                if all_flight_histories is None:
+                    all_flight_histories = df
+                else:
+                    all_flight_histories.append(df)
+                    all_flight_histories.drop_duplicates(take_last=True, inplace=True)
         store['flight_histories'] = all_flight_histories
     else:
         all_flight_histories = store['flight_histories']
@@ -1455,7 +1456,7 @@ def build_multi_features(store_filename, data_prefix, data_rev_prefix, augmented
 
 def build_predict(store_filename, data_prefix, test_data_rev_prefix):
     pool_queue = []
-    pool = Pool(processes=4)
+    pool = Pool(processes=2)
     for subdirname in os.walk('{0}{1}'.format(data_prefix, test_data_rev_prefix)).next()[1]:
         store_filename = 'flight_quest_{0}.h5'.format(subdirname)
         pool_queue.append([data_prefix, test_data_rev_prefix, subdirname, store_filename, "predict_"])
@@ -1525,8 +1526,12 @@ def generate_features(learned_class_name, store):
     store = pd.HDFStore('features_{0}.h5'.format(learned_class_name))
     write_dataframe("features_{0}".format(learned_class_name), all_df, store)
 
-def cross_validate(learned_class_name):
-    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0, nrows=25000) 
+def cross_validate(learned_class_name, sample_size=None):
+    all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), index_col=0)
+    if sample_size is not None:
+        samples = sample_size
+        rows = random.sample(all_df.index, samples)
+        all_df = all_df.ix[rows]
     print learned_class_name
     print all_df
     series = all_df[learned_class_name]
@@ -1686,6 +1691,7 @@ def predict(learned_class_name, features_to_remove, store):
     
     all_df = pd.read_csv("features_{0}.csv".format(learned_class_name), nrows=1)
     all_df.set_index("flight_history_id", inplace=True, verify_integrity=True)
+    del all_df[learned_class_name]
     if "ind" in all_df.columns:
         del all_df["ind"]
     
@@ -1781,7 +1787,7 @@ if __name__ == '__main__':
         ''' Get dict of dict of lists for columns to unique categorical values in the columns '''
         build_uniques(store_filename, data_prefix, data_rev_prefix, augmented_data_rev_prefix)
     elif kind == "cross_validate":
-        cross_validate(learned_class_name)
+        cross_validate(learned_class_name, sample_size)
     elif kind == "test":
         test(learned_class_name, store)
     elif kind == "learn":

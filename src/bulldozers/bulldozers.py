@@ -30,14 +30,12 @@ def parse_date_time(val):
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
 
 def flatten(df, column_to_flatten, column_to_sort_flattening=None, index_to_ignore=None, max_number_to_flatten=None, prefix=""):
-    print "grouping"
     grouped = df.groupby(column_to_flatten)
     groups = []
     i = 0
     for name, group in grouped:
         d = {column_to_flatten:name}
         if column_to_sort_flattening is not None:
-            print "sorting"
             group = group.sort_index(by=column_to_sort_flattening, ascending=False)
         if max_number_to_flatten is None:
             max_number_to_flatten = len(group.values)
@@ -79,7 +77,7 @@ def flatten_data_at_same_auction(df):
         for state in unique_states:
             per_sale_df = per_sale_df[per_sale_df['state'] == state]
             flattened_df = None
-            for ix, row in per_sale_df.iterrows():
+            for k, (ix, row) in enumerate(per_sale_df.iterrows()):
                 print "flattening"
                 t_df = flatten(per_sale_df, 'saledate', 'YearMade', index_to_ignore=ix)
                 t_df['SalesID'] = ix
@@ -88,6 +86,7 @@ def flatten_data_at_same_auction(df):
                     flattened_df = t_df
                 else:
                     flattened_df = flattened_df.append(t_df)
+                print "inner: {0}/{1}".format(k, len(per_sale_df))
             if flattened_df is not None:
                 print "joining flattened", new_df
                 new_df = new_df.join(flattened_df)

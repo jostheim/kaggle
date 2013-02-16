@@ -72,12 +72,13 @@ def flatten_data_at_same_auction(df):
     i = 0
     new_df = df.copy(True)
     new_df.set_index('SalesID', inplace=True, verify_integrity=True)
+    flattened_df = []
     for sale_date in unique_sales_dates:
         per_sale_df = df[df['saledate'] == sale_date]
         unique_states = np.unique(per_sale_df['state'])
         for state in unique_states:
             per_sale_df = per_sale_df[per_sale_df['state'] == state]
-            flattened_df = []
+            
             grouped = per_sale_df.groupby('saledate')
             for k, (ix, row) in enumerate(per_sale_df.iterrows()):
                 groups = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
@@ -89,13 +90,13 @@ def flatten_data_at_same_auction(df):
                 else:
                     flattened_df += groups
                 print "inner: {0}/{1}".format(k, len(per_sale_df))
-            if flattened_df is not None and len(flattened_df) > 1:
-                flattened_df = pd.DataFrame(flattened_df)
-                flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
-                print "joining flattened", new_df
-                new_df = new_df.join(flattened_df)
         i += 1
-        print "{0}/{1}".format(i, len(unique_sales_dates))
+        print "{0}/{1}, len(flattened):{2}".format(i, len(unique_sales_dates), len(flattened_df))
+    if flattened_df is not None and len(flattened_df) > 1:
+        flattened_df = pd.DataFrame(flattened_df)
+        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
+        print "joining flattened", new_df
+        new_df = new_df.join(flattened_df)
 
 def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
     for col in columns:

@@ -78,7 +78,8 @@ def flatten_data_at_same_auction(df):
             for k, (ix, row) in enumerate(per_sale_df.iterrows()):
                 print "flattening"
                 groups = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
-                groups['SalesID'] = ix
+                for group in groups:
+                    group['SalesID'] = ix
 #                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 if flattened_df is None:
                     flattened_df = groups

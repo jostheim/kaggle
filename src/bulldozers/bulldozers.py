@@ -70,6 +70,7 @@ def get_date_dataframe(date_column):
 def flatten_data_at_same_auction(df):
     unique_sales_dates = np.unique(df['saledate'])
     i = 0
+    new_df = df.copy(True)
     for sale_date in unique_sales_dates:
         per_sale_df = df[df['saledate'] == sale_date]
         unique_states = np.unique(per_sale_df['state'])
@@ -87,7 +88,7 @@ def flatten_data_at_same_auction(df):
                     flattened_df = flattened_df.append(t_df)
             if flattened_df is not None:
                 print "joining flattened", df
-                df = df.join(flattened_df)
+                new_df = new_df.join(flattened_df)
         i += 1
         print "{0}/{1}".format(i, len(unique_sales_dates))
 

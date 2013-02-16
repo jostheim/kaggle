@@ -63,7 +63,7 @@ def get_date_dataframe(date_column):
         "SaleDayOfWeek": [d.weekday for d in date_column]
         }, index=date_column.index)
 
-def convert_categorical_to_features(train, test, columns):
+def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
     for col in columns:
         if train[col].dtype == np.dtype('object'):
             s = np.unique(train[col].values)
@@ -107,12 +107,12 @@ if __name__ == '__main__':
     columns.remove("SalePrice")
     columns.remove("saledate")
     
-    convert_categorical_to_features(train, test, columns)
-    flatten_data_at_same_auction(train)
-    train.to_csv("train.csv")
+    convert_categorical_to_features(train, test, columns, train_fea, test_fea)
+    flatten_data_at_same_auction(train_fea)
+    train_fea.to_csv("train.csv")
     train = None
-    flatten_data_at_same_auction(test)
-    test.to_csv("test.csv")
+    flatten_data_at_same_auction(test_fea)
+    test_fea.to_csv("test.csv")
     test = None
     
         

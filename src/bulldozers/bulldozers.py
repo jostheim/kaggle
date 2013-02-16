@@ -97,8 +97,10 @@ if __name__ == '__main__':
     store = pd.HDFStore('bulldozers.h5')
     store_filename = 'bulldozers.h5'
     data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
-    train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), parse_dates=[10], date_parser=parse_date_time)
-    test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  parse_dates=[9], date_parser=parse_date_time)
+    train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
+                        converters={"saledate": dateutil.parser.parse}))
+    test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
+                       converters={"saledate": dateutil.parser.parse})
     
     train_fea = get_date_dataframe(train["saledate"])
     test_fea = get_date_dataframe(test["saledate"])

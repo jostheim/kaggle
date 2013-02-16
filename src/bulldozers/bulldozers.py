@@ -15,7 +15,7 @@ from sklearn import cross_validation
 import traceback
 
 def parse_date_time(val):
-    if str(val).lower().strip() not in na_values and str(val).lower().strip() != "nan":
+    if val is not np.nan:
         #'2012-11-12 17:30:00+00:00
         try:
             datetime_obj = dateutil.parser.parse(val)

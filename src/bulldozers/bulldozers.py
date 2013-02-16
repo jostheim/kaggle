@@ -35,7 +35,8 @@ def flatten(grouped, column_to_flatten, column_to_sort_flattening=None, index_to
     for name, group in grouped:
         if len(group) == 0:
             continue
-        d = {column_to_flatten:name}
+        d = {}
+#        d = {column_to_flatten:name}
         if column_to_sort_flattening is not None:
             group = group.sort_index(by=column_to_sort_flattening, ascending=False)
         if max_number_to_flatten is None:

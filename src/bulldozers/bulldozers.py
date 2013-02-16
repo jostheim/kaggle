@@ -55,13 +55,27 @@ def flatten(df, column_to_flatten, column_to_sort_flattening=None, max_number_to
     tmp_df.set_index(column_to_flatten, inplace=True, verify_integrity=True)
     return tmp_df
 
-if __name__ == '__main__':
-    store = pd.HDFStore('bulldozers.h5')
-    store_filename = 'bulldozers.h5'
-    data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
-    df = pd.read_csv("{0}{1}".format(data_prefix, "train.csv"), index_col=0, parse_dates=[9], date_parser=parse_date_time)
+def get_date_dataframe(date_column):
+    return pd.DataFrame({
+        "SaleYear": [d.year for d in date_column],
+        "SaleMonth": [d.month for d in date_column],
+        "SaleDay": [d.day for d in date_column],
+        "SaleDayOfWeek": [d.weekday for d in date_column]
+        }, index=date_column.index)
+
+def convert_categorical_to_features(train, test, columns):
+    for col in columns:
+        if train[col].dtype == np.dtype('object'):
+            s = np.unique(train[col].values)
+            mapping = pd.Series([x[0] for x in enumerate(s)], index = s)
+            train_fea = train_fea.join(train[col].map(mapping))
+            test_fea = test_fea.join(test[col].map(mapping))
+        else:
+            train_fea = train_fea.join(train[col])
+            test_fea = test_fea.join(test[col])
+
+def flatten_data_at_same_auction(df):
     unique_sales_dates = np.unique(df['saledate'])
-    unique_locations = np.unique(df['state'])
     i = 0
     for sale_date in unique_sales_dates:
         per_sale_df = df[df['saledate'] == sale_date]
@@ -76,12 +90,32 @@ if __name__ == '__main__':
                 flattened_df = t_df
             else:
                 flattened_df = flattened_df.append(t_df)
-            print flattened_df
         df = df.join(flattened_df)
-        i += 1
-        if i > 2:
-            break
-    print df
+
+
+if __name__ == '__main__':
+    store = pd.HDFStore('bulldozers.h5')
+    store_filename = 'bulldozers.h5'
+    data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
+    train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), index_col=0, parse_dates=[9], date_parser=parse_date_time)
+    test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"), index_col=0, parse_dates=[8], date_parser=parse_date_time)
+    
+    train_fea = get_date_dataframe(train["saledate"])
+    test_fea = get_date_dataframe(test["saledate"])
+    
+    columns = set(train.columns)
+    columns.remove("SalesID")
+    columns.remove("SalePrice")
+    columns.remove("saledate")
+    
+    convert_categorical_to_features(train, test, columns)
+    flatten_data_at_same_auction(train)
+    train.to_csv("train.csv")
+    train = None
+    flatten_data_at_same_auction(test)
+    test.to_csv("test.csv")
+    test = None
+    
         
         
     

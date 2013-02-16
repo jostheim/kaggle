@@ -80,6 +80,7 @@ def flatten_data_at_same_auction(df):
                 t_df = flatten(per_sale_df, 'saledate', 'YearMade', index_to_ignore=ix)
                 t_df['SalesID'] = ix
                 t_df.set_index('SalesID', inplace=True, verify_integrity=True)
+                print t_df
                 if flattened_df is None:
                     flattened_df = t_df
                 else:

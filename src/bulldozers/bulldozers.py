@@ -33,6 +33,8 @@ def flatten(grouped, column_to_flatten, column_to_sort_flattening=None, index_to
     groups = []
     i = 0
     for name, group in grouped:
+        if len(group) == 0:
+            continue
         d = {column_to_flatten:name}
         if column_to_sort_flattening is not None:
             group = group.sort_index(by=column_to_sort_flattening, ascending=False)
@@ -86,7 +88,7 @@ def flatten_data_at_same_auction(df):
                 else:
                     flattened_df += groups
                 print "inner: {0}/{1}".format(k, len(per_sale_df))
-            if flattened_df is not None and len(flattened_df) > 0:
+            if flattened_df is not None and len(flattened_df) > 1:
                 flattened_df = pd.DataFrame(flattened_df)
                 flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 print "joining flattened", new_df

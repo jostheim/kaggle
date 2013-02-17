@@ -166,7 +166,7 @@ def get_related_rows(train_fea_tmp, row):
     d = {}
     for i, ix in enumerate(series.index[0:10]):
         d['index'] = ix
-        for col, series in train_fea_tmp.ix.iteritems():
+        for col, series in train_fea_tmp.iteritems():
             d["{0}_{1}".format(i, col)] = series.ix[ix] 
     return d
 

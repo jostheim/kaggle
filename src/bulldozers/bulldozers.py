@@ -181,7 +181,7 @@ def get_related_rows_proxy(args):
         print traceback.format_exc()
     return ret
 
-def get_all_related_rows(fea):
+def get_all_related_rows_as_features(fea):
     fea_tmp = fea.fillna(random.uniform(0, 4*len(fea)))
     join_dicts = []
     pool_queue = []
@@ -194,6 +194,7 @@ def get_all_related_rows(fea):
     join_df = pd.DataFrame(join_dicts)
     join_df.set_index('index', inplace=True, verify_integrity=True)
     fea = fea.join(join_df)
+    return fea
 
 
 if __name__ == '__main__':
@@ -218,11 +219,12 @@ if __name__ == '__main__':
     
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
     
-    
+    train_fea = get_all_related_rows_as_features(train_fea.copy(True))
     
     train_fea.to_csv("train.csv")
     train = None
-    
+
+    test_fea = get_all_related_rows_as_features(test_fea.copy(True))
     
     test_fea = flatten_data_at_same_auction(test_fea)
     test_fea.to_csv("test.csv")

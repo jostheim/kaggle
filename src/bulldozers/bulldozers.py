@@ -16,6 +16,10 @@ import traceback
 from sklearn.metrics.pairwise import check_pairwise_arrays
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.preprocessing import normalize
+from sklearn.utils.extmath import safe_sparse_dot
+
+random.seed(0)
+
 
 def cosine_similarity(X, Y=None):
     """Compute cosine similarity between samples in X and Y.
@@ -152,6 +156,31 @@ def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
             test_fea = test_fea.join(test[col])
     return train_fea, test_fea
 
+def get_related_rows(train_fea_tmp, row):
+    cosines = cosine_similarity(train_fea_tmp, row)
+    cosines_t = []
+    for cosine in cosines:
+        cosines_t.append(cosine[0])
+    series = pd.Series(np.array(cosines_t), index=train_fea_tmp.index)
+    series = series.sort_index(ascending=False)
+    d = {}
+    for i, ix in enumerate(series.index[0:10]):
+        d['index'] = ix
+        for col, series in train_fea_tmp.ix.iteritems():
+            d["{0}_{1}".format(i, col)] = series.ix[ix] 
+    return d
+
+def get_related_rows_proxy(args):
+    train_fea_tmp = args[0]
+    row = args[1]
+    ret = None
+    try:
+        ret = get_related_rows(train_fea_tmp, row)
+    except Exception as e:
+        print e
+        print traceback.format_exc()
+    return ret
+
 
 if __name__ == '__main__':
     store = pd.HDFStore('bulldozers.h5')
@@ -174,8 +203,21 @@ if __name__ == '__main__':
     columns.remove("saledate")
     
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    cosines = cosine_similarity(train_fea.fillna(-99.0))
-    print cosines
+    train_fea_tmp = train_fea.fillna(random.uniform(0, 4*len(train_fea)))
+    join_dicts = []
+    pool_queue = []
+    pool = Pool(processes=8)
+    for i, (ix, row) in enumerate(train_fea_tmp.iterrows()):
+        pool_queue.append([train_fea_tmp, row])
+    results = pool.map(get_related_rows_proxy, pool_queue, len(train_fea_tmp)/8)
+    join_dicts = []
+    for d in results:
+        join_dicts.append(d)
+    join_df = pd.DataFrame(join_dicts)
+    join_df.set_index('index', inplace=True, verify_integrity=True)
+    print join_df
+    train_fea = train_fea.join(join_df)
+    
     train_fea.to_csv("train.csv")
     train = None
     test_fea = flatten_data_at_same_auction(test_fea)

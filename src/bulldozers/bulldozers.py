@@ -13,6 +13,47 @@ from pytz import timezone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation
 import traceback
+from sklearn.metrics.pairwise import check_pairwise_arrays
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.preprocessing import normalize
+
+def cosine_similarity(X, Y=None):
+    """Compute cosine similarity between samples in X and Y.
+
+    Cosine similarity, or the cosine kernel, computes similarity as the
+    normalized dot product of X and Y:
+
+        K(X, Y) = <X, Y> / (||X||*||Y||)
+
+    On L2-normalized data, this function is equivalent to linear_kernel.
+
+    Parameters
+    ----------
+    X : array_like, sparse matrix
+        with shape (n_samples_X, n_features).
+
+    Y : array_like, sparse matrix (optional)
+        with shape (n_samples_Y, n_features).
+
+    Returns
+    -------
+    kernel matrix : array_like
+        An array with shape (n_samples_X, n_samples_Y).
+    """
+    # to avoid recursive import
+
+    X, Y = check_pairwise_arrays(X, Y)
+
+    X_normalized = normalize(X, copy=True)
+    if X is Y:
+        Y_normalized = X_normalized
+    else:
+        Y_normalized = normalize(Y, copy=True)
+
+    K = linear_kernel(X_normalized, Y_normalized)
+
+    return K
+
 
 def parse_date_time(val):
     if val is not np.nan:
@@ -130,10 +171,11 @@ if __name__ == '__main__':
     columns = set(train.columns)
 #    columns.remove("SalesID")
     columns.remove("SalePrice")
-#    columns.remove("saledate")
+    columns.remove("saledate")
     
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    train_fea = flatten_data_at_same_auction(train_fea)
+    cosines = cosine_similarity(train_fea.fillna(-99.0))
+    print cosines
     train_fea.to_csv("train.csv")
     train = None
     test_fea = flatten_data_at_same_auction(test_fea)

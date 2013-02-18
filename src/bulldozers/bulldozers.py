@@ -164,7 +164,7 @@ def get_related_rows(train_fea_tmp, row, index):
     series = pd.Series(np.array(cosines_t), index=train_fea_tmp.index)
     series = series.sort_index(ascending=False)
     d = {'index':index}
-    for i, ix in enumerate(series.index[0:100]):
+    for i, ix in enumerate(series.index[0:10]):
         for col, series in train_fea_tmp.iteritems():
             d["{0}_{1}".format(i, col)] = series.ix[ix] 
     return d

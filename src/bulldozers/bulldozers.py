@@ -18,6 +18,8 @@ from sklearn.metrics.pairwise import linear_kernel
 from sklearn.preprocessing import normalize
 from sklearn.utils.extmath import safe_sparse_dot
 
+
+
 random.seed(0)
 
 
@@ -193,11 +195,14 @@ def get_all_related_rows_as_features(fea):
         if i > 0 and i%update == 0:
             results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
             pool_queue = []
+            pool.terminate()
+            pool = Pool(processes=8)
             print "done processing {0}/{1}".format(i, len(fea_tmp)) 
     if len(pool_queue) > 0:
         results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
     for d in results:
         join_dicts.append(d)
+    pool.terminate()
     join_df = pd.DataFrame(join_dicts)
     join_df.set_index('index', inplace=True, verify_integrity=True)
     fea = fea.join(join_df)

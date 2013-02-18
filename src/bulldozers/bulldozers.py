@@ -187,7 +187,7 @@ def get_all_related_rows_as_features(fea):
     pool_queue = []
     pool = Pool(processes=8)
     results = []
-    update = len(fea_tmp)/100
+    update = len(fea_tmp)/1000
     for i, (ix, row) in enumerate(fea_tmp.iterrows()):
         pool_queue.append([fea_tmp, row, ix])
         if i > 0 and i%update == 0:

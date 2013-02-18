@@ -187,10 +187,10 @@ def get_all_related_rows_as_features(fea):
     pool_queue = []
     pool = Pool(processes=8)
     results = []
-    update = len(fea_tmp)/1000
+    update = len(fea_tmp)/100
     for i, (ix, row) in enumerate(fea_tmp.iterrows()):
         pool_queue.append([fea_tmp, row, ix])
-        if i%update == 0:
+        if i > 0 and i%update == 0:
             results += pool.map(get_related_rows_proxy, pool_queue, len(fea_tmp)/8)
             pool_queue = []
             print "done processing {0}/{1}".format(i, len(fea_tmp))

@@ -191,11 +191,11 @@ def get_all_related_rows_as_features(fea):
     for i, (ix, row) in enumerate(fea_tmp.iterrows()):
         pool_queue.append([fea_tmp, row, ix])
         if i > 0 and i%update == 0:
-            results += pool.map(get_related_rows_proxy, pool_queue, len(fea_tmp)/8)
+            results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
             pool_queue = []
             print "done processing {0}/{1}".format(i, len(fea_tmp))
     if len(pool_queue) > 0:
-        results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue))
+        results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
     for d in results:
         join_dicts.append(d)
     join_df = pd.DataFrame(join_dicts)

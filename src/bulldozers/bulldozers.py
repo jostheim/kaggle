@@ -213,6 +213,37 @@ if __name__ == '__main__':
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
                        converters={"saledate": dateutil.parser.parse})
     
+    machine_appendix = pd.read_csv("{0}{1}".format(data_prefix, "Machine_Appendix.csv"), index_col=0)
+    print machine_appendix
+    
+    train['MfgYear'] = np.nan
+    train['fiManufacturerID'] = np.nan
+    train['fiManufacturerDesc'] = np.nan
+    train['PrimarySizeBasis'] = np.nan
+    train['PrimaryLower'] = np.nan
+    train['PrimaryUpper'] = np.nan
+    # clean up data in original with the appendix
+    for ix, row in train.iterrows():
+        machine_id = row['MachineID']
+        machine_appendix_row = machine_appendix.ix[machine_id]
+        for col, val in machine_appendix_row.iteritems():
+            row[col] = val 
+    
+    test['MfgYear'] = np.nan
+    test['fiManufacturerID'] = np.nan
+    test['fiManufacturerDesc'] = np.nan
+    test['PrimarySizeBasis'] = np.nan
+    test['PrimaryLower'] = np.nan
+    test['PrimaryUpper'] = np.nan
+    for ix, row in test.iterrows():
+        machine_id = row['MachineID']
+        machine_appendix_row = machine_appendix.ix[machine_id]
+        for col, val in machine_appendix_row.iteritems():
+            row[col] = val 
+    
+    train['YearMade'] = train['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
+    test['YearMade'] = test['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
+
     train.fillna("NaN", inplace=True)
     test.fillna("NaN", inplace=True)
     

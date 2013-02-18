@@ -193,7 +193,7 @@ def get_all_related_rows_as_features(fea):
         if i > 0 and i%update == 0:
             results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
             pool_queue = []
-            print "done processing {0}/{1}".format(i, len(fea_tmp))
+            print "done processing {0}/{1}".format(i, len(fea_tmp)) 
     if len(pool_queue) > 0:
         results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
     for d in results:
@@ -223,6 +223,7 @@ if __name__ == '__main__':
 #    columns.remove("SalesID")
     columns.remove("SalePrice")
     columns.remove("saledate")
+    
     
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
     

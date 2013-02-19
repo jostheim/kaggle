@@ -283,7 +283,7 @@ if __name__ == '__main__':
         train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
                         converters={"saledate": dateutil.parser.parse})
         train_df = train_df.join(train['SalePrice'])
-        print train_df
+        train_df.to_csv("train.csv")
     if kind == "cross_validate":
         train_df = pd.read_csv("train.csv", index_col=0)
         targets = train_df['']

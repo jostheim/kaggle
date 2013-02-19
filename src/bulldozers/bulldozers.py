@@ -273,7 +273,7 @@ def random_forest_cross_validate(targets, features):
 
 if __name__ == '__main__':
     data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
-    kind = sys.argv[0]
+    kind = sys.argv[1]
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":

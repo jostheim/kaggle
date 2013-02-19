@@ -236,6 +236,21 @@ def prepare_train_features(data_prefix):
     train_fea.to_csv("train.csv")
     return train_fea
 
+def get_metric(cfr, features, targets):
+    #Mean Square Log Error MSLE = (1/N) * ∑(log(y)est – log(y)actual)2
+    #Root Mean Square Log Error RMSLE = (MSLE)1/2
+    sum_diff = 0.0
+    p = cfr.predict_proba(features)
+    unique_classes = sorted(cfr.classes_[0])
+    for k, target in enumerate(targets):
+        # expectation across all classes
+        expectation = np.sum(unique_classes*p[k])
+        print expectation, target
+        sum_diff += np.sqrt((np.power((numpy.log(expectation) - numpy.log(target)),2))/float(len(targets)))
+    mean_diff = sum_diff
+    return mean_diff
+
+
 def random_forest_cross_validate(targets, features):
     cv = cross_validation.KFold(len(features), k=5, indices=False)
     #iterate through the training and test cross validation segments and
@@ -256,6 +271,7 @@ def random_forest_cross_validate(targets, features):
         cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
         score = cfr.score(features[testcv], targets[testcv])
         print "Score for cross validation #{0}, score: {1}".format(i, score)
+        mean_diff = get_metric(cfr, features[testcv], targets[testcv])
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)
         print "Features importance"
@@ -286,7 +302,10 @@ if __name__ == '__main__':
         train_df.to_csv("train.csv")
     if kind == "cross_validate":
         train_df = pd.read_csv("train.csv", index_col=0)
-        targets = train_df['']
+        targets = train_df['SalePrice'].dropna()
+        features = train_df.ix[targets.index]
+        del features['SalePrice']
+        random_forest_cross_validate(targets, features)
     
         
     

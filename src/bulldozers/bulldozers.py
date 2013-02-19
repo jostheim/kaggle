@@ -262,7 +262,7 @@ def random_forest_cross_validate(targets, features):
             max_features=None,
             verbose=2,
             compute_importances=True,
-            n_jobs=4,
+            n_jobs=1,
             random_state=0,
         )
         print "Fitting cross validation #{0}".format(i)
@@ -305,6 +305,7 @@ if __name__ == '__main__':
         targets = train_df['SalePrice'].dropna()
         features = train_df.ix[targets.index]
         del features['SalePrice']
+        print "Doing cross validation with {0} features and {1} targets ".format(len(features), len(targets))
         random_forest_cross_validate(targets, features)
     
         

@@ -114,37 +114,6 @@ def get_date_dataframe(date_column):
         "SaleDayOfWeek": [d.weekday() for d in date_column]
         }, index=date_column.index)
 
-def flatten_data_at_same_auction(df):
-    unique_sales_dates = np.unique(df['saledate'])
-    i = 0
-    new_df = df.copy(True)
-    new_df.set_index('SalesID', inplace=True, verify_integrity=True)
-    flattened_df = []
-    for sale_date in unique_sales_dates:
-        per_sale_df = df[df['saledate'] == sale_date]
-        unique_states = np.unique(per_sale_df['state'])
-        for state in unique_states:
-            per_sale_df = per_sale_df[per_sale_df['state'] == state]
-            
-            grouped = per_sale_df.groupby('saledate')
-            for k, (ix, row) in enumerate(per_sale_df.iterrows()):
-                groups = flatten(grouped, 'saledate', 'YearMade', index_to_ignore=ix)
-                for group in groups:
-                    group['SalesID'] = ix
-#                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
-                if flattened_df is None:
-                    flattened_df = groups
-                else:
-                    flattened_df += groups
-                print "inner: {0}/{1}".format(k, len(per_sale_df))
-        i += 1
-        print "{0}/{1}, len(flattened):{2}".format(i, len(unique_sales_dates), len(flattened_df))
-    if flattened_df is not None and len(flattened_df) > 1:
-        flattened_df = pd.DataFrame(flattened_df)
-        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
-        print "joining flattened", new_df
-        new_df = new_df.join(flattened_df)
-
 def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
     for col in columns:
         if train[col].dtype == np.dtype('object'):
@@ -207,18 +176,41 @@ def get_all_related_rows_as_features(fea):
     return fea
 
 
-if __name__ == '__main__':
-    store = pd.HDFStore('bulldozers.h5')
-    store_filename = 'bulldozers.h5'
-    data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
+def prepare_test_features(data_prefix):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
                         converters={"saledate": dateutil.parser.parse})
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
                        converters={"saledate": dateutil.parser.parse})
-    
     machine_appendix = pd.read_csv("{0}{1}".format(data_prefix, "Machine_Appendix.csv"), index_col=0)
-    print machine_appendix
-    
+    test['MfgYear'] = np.nan
+    test['fiManufacturerID'] = np.nan
+    test['fiManufacturerDesc'] = np.nan
+    test['PrimarySizeBasis'] = np.nan
+    test['PrimaryLower'] = np.nan
+    test['PrimaryUpper'] = np.nan
+    for ix, row in test.iterrows():
+        machine_id = row['MachineID']
+        machine_appendix_row = machine_appendix.ix[machine_id]
+        for col, val in machine_appendix_row.iteritems():
+            row[col] = val 
+    test['YearMade'] = test['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
+    test.fillna("NaN", inplace=True)
+    test_fea = get_date_dataframe(test["saledate"])
+    train_fea = get_date_dataframe(train["saledate"])
+    columns = set(train.columns)
+#    columns.remove("SalesID")
+#    columns.remove("SalePrice")
+    columns.remove("saledate")
+    train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
+    test_fea = get_all_related_rows_as_features(test_fea.copy(True))
+    return test_fea
+
+def prepare_train_features(data_prefix):
+    train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
+                        converters={"saledate": dateutil.parser.parse})
+    test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
+                       converters={"saledate": dateutil.parser.parse})
+    machine_appendix = pd.read_csv("{0}{1}".format(data_prefix, "Machine_Appendix.csv"), index_col=0)
     train['MfgYear'] = np.nan
     train['fiManufacturerID'] = np.nan
     train['fiManufacturerDesc'] = np.nan
@@ -231,48 +223,71 @@ if __name__ == '__main__':
         machine_appendix_row = machine_appendix.ix[machine_id]
         for col, val in machine_appendix_row.iteritems():
             row[col] = val 
-    
-    test['MfgYear'] = np.nan
-    test['fiManufacturerID'] = np.nan
-    test['fiManufacturerDesc'] = np.nan
-    test['PrimarySizeBasis'] = np.nan
-    test['PrimaryLower'] = np.nan
-    test['PrimaryUpper'] = np.nan
-    for ix, row in test.iterrows():
-        machine_id = row['MachineID']
-        machine_appendix_row = machine_appendix.ix[machine_id]
-        for col, val in machine_appendix_row.iteritems():
-            row[col] = val 
-    
     train['YearMade'] = train['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
-    test['YearMade'] = test['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
-
     train.fillna("NaN", inplace=True)
-    test.fillna("NaN", inplace=True)
-    
     train_fea = get_date_dataframe(train["saledate"])
     test_fea = get_date_dataframe(test["saledate"])
-    
     columns = set(train.columns)
 #    columns.remove("SalesID")
-    columns.remove("SalePrice")
+#    columns.remove("SalePrice") 
     columns.remove("saledate")
-    
-    
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    
     train_fea = get_all_related_rows_as_features(train_fea.copy(True))
-    
     train_fea.to_csv("train.csv")
-    train = None
+    return train_fea
 
-    test_fea = get_all_related_rows_as_features(test_fea.copy(True))
+def random_forest_cross_validate(targets, features):
+    cv = cross_validation.KFold(len(features), k=5, indices=False)
+    #iterate through the training and test cross validation segments and
+    #run the classifier on each one, aggregating the results into a list
+    results = []
+    for i, (traincv, testcv) in enumerate(cv):
+        cfr = RandomForestClassifier(
+            n_estimators=100,
+            max_features=None,
+            verbose=2,
+            compute_importances=True,
+            n_jobs=8,
+            random_state=0,
+        )
+        print "Fitting cross validation #{0}".format(i)
+        cfr.fit(features[traincv], targets[traincv])
+        print "Scoring cross validation #{0}".format(i)
+        cfr.set_params(n_jobs=1) # read in the features to predict, remove bad columns
+        score = cfr.score(features[testcv], targets[testcv])
+        print "Score for cross validation #{0}, score: {1}".format(i, score)
+        print "Mean difference: {0}".format(mean_diff)
+        results.append(mean_diff)
+        print "Features importance"
+        features_list = []
+        for j, importance in enumerate(cfr.feature_importances_):
+            if importance > 0.0:
+                column = features.columns[j]
+                features_list.append((column, importance))
+        features_list = sorted(features_list, key=lambda x: x[1], reverse=True)
+        for j, tup in enumerate(features_list):
+            print j, tup
+        pickle.dump(features_list, open("important_features.p", 'wb'))
+        print "Mean difference: {0}".format(mean_diff)
+        results.append(mean_diff)
+
+if __name__ == '__main__':
+    data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
+    kind = sys.argv[0]
+    if kind == "prepare_test_features":
+        prepare_test_features(data_prefix)
+    if kind == "prepare_train_features":
+        prepare_train_features(data_prefix)
+    if kind == "fix_train_features":
+        train_df = pd.read_csv("train.csv", index_col=0)
+        train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
+                        converters={"saledate": dateutil.parser.parse})
+        train_df = train_df.join(train['SalePrice'])
+        pritn train_df
+    if kind == "cross_validate":
+        train_df = pd.read_csv("train.csv", index_col=0)
+        targets = train_df['']
     
-    test_fea = flatten_data_at_same_auction(test_fea)
-    test_fea.to_csv("test.csv")
-    test = None
-    
-        
         
     
     

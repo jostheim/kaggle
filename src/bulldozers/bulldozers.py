@@ -237,7 +237,7 @@ def prepare_train_features(data_prefix):
     return train_fea
 
 def get_metric(cfr, features, targets):
-    #Mean Square Log Error MSLE = (1/N) * ∑(log(y)est – log(y)actual)2
+    #Mean Square Log Error MSLE = (1/N) * SUM(log(y)est – log(y)actual)2
     #Root Mean Square Log Error RMSLE = (MSLE)1/2
     sum_diff = 0.0
     p = cfr.predict_proba(features)

@@ -137,10 +137,11 @@ def get_related_rows(train_fea_tmp, row, index):
     series = series.order(ascending=False)
     d = {'index':index}
     i = 0
-    for i, (ix, tmp) in enumerate(series.iteritems()):
+    for i, (ix, sim) in enumerate(series.iteritems()):
         if ix == index:
             continue
         return
+        d["{0}_similarity".format(i)] = sim
         for col, val in train_fea_tmp.ix[ix].iteritems():
             d["{0}_{1}".format(i, col)] = val 
         i += 1

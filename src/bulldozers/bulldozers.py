@@ -138,7 +138,9 @@ def get_related_rows(train_fea_tmp, row, index):
     for i, ix in enumerate(series.index[0:10]):
         for col, series in train_fea_tmp.iteritems():
             d["{0}_{1}".format(i, col)] = series.ix[ix] 
-    return d
+    df = pd.DataFrame(d)
+    df.set_index('index', inplace=True, verify_integrity=True)
+    return 
 
 def get_related_rows_proxy(args):
     train_fea_tmp = args[0]
@@ -154,7 +156,7 @@ def get_related_rows_proxy(args):
 
 def get_all_related_rows_as_features(fea):
     fea_tmp = fea.fillna(random.uniform(0, 4*len(fea)))
-    join_dicts = []
+    all_df = None
     pool_queue = []
     pool = Pool(processes=8)
     results = []
@@ -167,12 +169,13 @@ def get_all_related_rows_as_features(fea):
             print "done processing {0}/{1}".format(i, len(fea_tmp)) 
     if len(pool_queue) > 0:
         results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
-    for d in results:
-        join_dicts.append(d)
+    for df in results:
+        if all_df is None:
+            all_df = df
+        else:
+            all_df = all_df.append(df)
     pool.terminate()
-    join_df = pd.DataFrame(join_dicts)
-    join_df.set_index('index', inplace=True, verify_integrity=True)
-    fea = fea.join(join_df)
+    fea = fea.join(df)
     return fea
 
 

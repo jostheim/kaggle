@@ -246,7 +246,7 @@ def get_metric(cfr, features, targets):
         # expectation across all classes
         expectation = np.sum(unique_classes*p[k])
         print expectation, target
-        sum_diff += np.sqrt((np.power((numpy.log(expectation) - numpy.log(target)),2))/float(len(targets)))
+        sum_diff += np.sqrt((np.power((np.log(expectation) - np.log(target)),2))/float(len(targets)))
     mean_diff = sum_diff
     return mean_diff
 

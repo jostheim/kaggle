@@ -262,7 +262,7 @@ def random_forest_cross_validate(targets, features):
             max_features=None,
             verbose=2,
             compute_importances=True,
-            n_jobs=1,
+            n_jobs=8,
             random_state=0,
         )
         print "Fitting cross validation #{0}".format(i)
@@ -290,6 +290,9 @@ def random_forest_cross_validate(targets, features):
 if __name__ == '__main__':
     data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
     kind = sys.argv[1]
+    sample_size = None
+    if len(sys.argv) > 2:
+        sample_size = int(sys.argv[2])
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":
@@ -302,6 +305,8 @@ if __name__ == '__main__':
         train_df.to_csv("train.csv")
     if kind == "cross_validate":
         train_df = pd.read_csv("train.csv", index_col=0)
+        rows = random.sample(train_df.index, sample_size)
+        train_df = train_df.ix[rows]
         targets = train_df['SalePrice'].dropna()
         features = train_df.ix[targets.index]
         del features['SalePrice']

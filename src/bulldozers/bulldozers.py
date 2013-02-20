@@ -124,7 +124,8 @@ def convert_categorical_to_features(train, test, columns, train_fea, test_fea):
             test_fea = test_fea.join(test[col].map(mapping))
         else:
             train_fea = train_fea.join(train[col])
-            test_fea = test_fea.join(test[col])
+            if col in test.columns:
+                test_fea = test_fea.join(test[col])
     return train_fea, test_fea
 
 def get_related_rows(train_fea_tmp, row, index):
@@ -132,15 +133,22 @@ def get_related_rows(train_fea_tmp, row, index):
     cosines_t = []
     for cosine in cosines:
         cosines_t.append(cosine[0])
-    series = pd.Series(np.array(cosines_t), index=train_fea_tmp.index)
-    series = series.sort_index(ascending=False)
+    series = pd.Series(np.array(cosines_t), index=train_fea_tmp.index, name="similarity")
+    series = series.order(ascending=False)
     d = {'index':index}
-    for i, ix in enumerate(series.index[0:10]):
-        for col, series in train_fea_tmp.iteritems():
-            d["{0}_{1}".format(i, col)] = series.ix[ix] 
+    i = 0
+    for i, (ix, tmp) in enumerate(series.iteritems()):
+        if ix == index:
+            continue
+        return
+        for col, val in train_fea_tmp.ix[ix].iteritems():
+            d["{0}_{1}".format(i, col)] = val 
+        i += 1
+        if i > 50:
+            break
     df = pd.DataFrame(d)
     df.set_index('index', inplace=True, verify_integrity=True)
-    return 
+    return df
 
 def get_related_rows_proxy(args):
     train_fea_tmp = args[0]
@@ -154,19 +162,26 @@ def get_related_rows_proxy(args):
         print traceback.format_exc()
     return ret
 
+def replace_nan_with_random(x):
+    if str(x).strip() == 'nan' or x is np.nan:
+        return random.uniform(0, 1.0)
+    else:
+        return x
+
 def get_all_related_rows_as_features(fea):
-    fea_tmp = fea.fillna(random.uniform(0, 4*len(fea)))
+    for col, series in fea.iteritems():
+        fea[col] = series.apply(lambda x: replace_nan_with_random(x))
     all_df = None
     pool_queue = []
     pool = Pool(processes=8)
     results = []
-    update = len(fea_tmp)/1000
-    for i, (ix, row) in enumerate(fea_tmp.iterrows()):
-        pool_queue.append([fea_tmp, row, ix])
+    update = len(fea)/1000
+    for i, (ix, row) in enumerate(fea.iterrows()):
+        pool_queue.append([fea, row, ix])
         if i > 0 and i%update == 0:
             results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
             pool_queue = []
-            print "done processing {0}/{1}".format(i, len(fea_tmp)) 
+            print "done processing {0}/{1}".format(i, len(fea)) 
     if len(pool_queue) > 0:
         results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
     for df in results:
@@ -175,8 +190,7 @@ def get_all_related_rows_as_features(fea):
         else:
             all_df = all_df.append(df)
     pool.terminate()
-    fea = fea.join(df)
-    return fea
+    return all_df
 
 
 def prepare_test_features(data_prefix):
@@ -205,7 +219,11 @@ def prepare_test_features(data_prefix):
 #    columns.remove("SalePrice")
     columns.remove("saledate")
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    test_fea = get_all_related_rows_as_features(test_fea.copy(True))
+    # gotta put nan's back
+    for col, series in test_fea.iteritems():
+        test_fea[col] = series.apply(lambda x: x if x != "NaN" else np.nan)
+    joiner = get_all_related_rows_as_features(test_fea.copy(True))
+    test_fea = test_fea.join(joiner)
     return test_fea
 
 def prepare_train_features(data_prefix):
@@ -226,6 +244,19 @@ def prepare_train_features(data_prefix):
         machine_appendix_row = machine_appendix.ix[machine_id]
         for col, val in machine_appendix_row.iteritems():
             row[col] = val 
+    
+    test['MfgYear'] = np.nan
+    test['fiManufacturerID'] = np.nan
+    test['fiManufacturerDesc'] = np.nan
+    test['PrimarySizeBasis'] = np.nan
+    test['PrimaryLower'] = np.nan
+    test['PrimaryUpper'] = np.nan
+    for ix, row in test.iterrows():
+        machine_id = row['MachineID']
+        machine_appendix_row = machine_appendix.ix[machine_id]
+        for col, val in machine_appendix_row.iteritems():
+            row[col] = val         
+    
     train['YearMade'] = train['YearMade'].apply(lambda x: x if x != 1000 else np.nan)
     train.fillna("NaN", inplace=True)
     train_fea = get_date_dataframe(train["saledate"])
@@ -235,9 +266,20 @@ def prepare_train_features(data_prefix):
 #    columns.remove("SalePrice") 
     columns.remove("saledate")
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    train_fea = get_all_related_rows_as_features(train_fea.copy(True))
+    train_fea.set_index("SalesID", inplace=True, verify_integrity=True)
+    # gotta put nan's back
+    for col, series in train_fea.iteritems():
+        train_fea[col] = series.apply(lambda x: replace_string_nan(x))
+    joiner = get_all_related_rows_as_features(train_fea.copy(True))
+    train_fea = train_fea.join(joiner)
     train_fea.to_csv("train.csv")
     return train_fea
+
+def replace_string_nan(x):
+    if str(x).strip() == "nan" or x is np.nan:
+        return np.nan
+    else:
+        return x
 
 def get_metric(cfr, features, targets):
     #Mean Square Log Error MSLE = (1/N) * SUM(log(y)est - log(y)actual)2

@@ -366,6 +366,7 @@ if __name__ == '__main__':
         targets = train_df['SalePrice'].dropna()
         features = train_df.ix[targets.index]
         del features['SalePrice']
+        del features['SalesID']
         print "Doing cross validation with {0} features and {1} targets ".format(len(features), len(targets))
         random_forest_cross_validate(targets, features)
     

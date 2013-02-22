@@ -230,9 +230,11 @@ def prepare_test_features(data_prefix):
     test_fea = test_fea.join(joiner)
     return test_fea
 
-def prepare_train_features(data_prefix):
+def prepare_train_features(data_prefix, sample_size = None):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
                         converters={"saledate": dateutil.parser.parse})
+    if sample_size is not None:
+        train = sample(train, sample_size)
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
                        converters={"saledate": dateutil.parser.parse})
     machine_appendix = pd.read_csv("{0}{1}".format(data_prefix, "Machine_Appendix.csv"), index_col=0)
@@ -336,6 +338,11 @@ def random_forest_cross_validate(targets, features):
         print "Mean difference: {0}".format(mean_diff)
         results.append(mean_diff)
 
+def sample(df, nsamples):
+    rows = random.sample(df.index, sample_size)
+    df = df.ix[rows]
+    return df
+
 if __name__ == '__main__':
     data_prefix = '/Users/jostheim/workspace/kaggle/data/bulldozers/'
     kind = sys.argv[1]
@@ -345,7 +352,7 @@ if __name__ == '__main__':
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":
-        prepare_train_features(data_prefix)
+        prepare_train_features(data_prefix, sample_size)
     if kind == "fix_train_features":
         train_df = pd.read_csv("train.csv", index_col=0)
         train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
@@ -354,8 +361,8 @@ if __name__ == '__main__':
         train_df.to_csv("train.csv")
     if kind == "cross_validate":
         train_df = pd.read_csv("train.csv", index_col=0)
-        rows = random.sample(train_df.index, sample_size)
-        train_df = train_df.ix[rows]
+        if sample_size is not None:
+            train_df = sample(train_df, sample_size)
         targets = train_df['SalePrice'].dropna()
         features = train_df.ix[targets.index]
         del features['SalePrice']

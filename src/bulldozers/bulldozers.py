@@ -309,7 +309,7 @@ def random_forest_cross_validate(targets, features):
     results = []
     for i, (traincv, testcv) in enumerate(cv):
         cfr = RandomForestClassifier(
-            n_estimators=100,
+            n_estimators=300,
             max_features=None,
             verbose=2,
             compute_importances=True,

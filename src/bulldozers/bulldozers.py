@@ -140,16 +140,13 @@ def get_related_rows(train_fea_tmp, row, index):
     for i, (ix, sim) in enumerate(series.iteritems()):
         if ix == index:
             continue
-        return
         d["{0}_similarity".format(i)] = sim
         for col, val in train_fea_tmp.ix[ix].iteritems():
             d["{0}_{1}".format(i, col)] = val 
         i += 1
         if i > 50:
             break
-    df = pd.DataFrame(d)
-    df.set_index('index', inplace=True, verify_integrity=True)
-    return df
+    return d
 
 def get_related_rows_proxy(args):
     train_fea_tmp = args[0]
@@ -174,22 +171,28 @@ def get_all_related_rows_as_features(fea):
         fea[col] = series.apply(lambda x: replace_nan_with_random(x))
     all_df = None
     pool_queue = []
-    pool = Pool(processes=8)
-    results = []
+    processes = 8
+    pool = Pool(processes=processes)
     update = len(fea)/1000
     for i, (ix, row) in enumerate(fea.iterrows()):
         pool_queue.append([fea, row, ix])
         if i > 0 and i%update == 0:
-            results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
+            res = pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/processes)
+            result = pd.DataFrame(res)
+            result.set_index("index", inplace=True, verify_integrity=True)
+            if all_df is None:
+                all_df = result
+            else:
+                all_df.append(result)
             pool_queue = []
             print "done processing {0}/{1}".format(i, len(fea)) 
     if len(pool_queue) > 0:
-        results += pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/8)
-    for df in results:
+        res = pool.map(get_related_rows_proxy, pool_queue, len(pool_queue)/processes)
+        result = pd.DataFrame(result)
         if all_df is None:
-            all_df = df
+            all_df = result
         else:
-            all_df = all_df.append(df)
+            all_df.append(result)
     pool.terminate()
     return all_df
 

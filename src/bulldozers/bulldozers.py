@@ -230,7 +230,7 @@ def prepare_test_features(data_prefix):
     test_fea = test_fea.join(joiner)
     return test_fea
 
-def prepare_train_features(data_prefix, sample_size = None):
+def prepare_train_features(data_prefix, sample_size = None, output_bayesian=False):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
                         converters={"saledate": dateutil.parser.parse})
     if sample_size is not None:
@@ -267,6 +267,24 @@ def prepare_train_features(data_prefix, sample_size = None):
     train.fillna("NaN", inplace=True)
     train_fea = get_date_dataframe(train["saledate"])
     test_fea = get_date_dataframe(test["saledate"])
+    
+    if output_bayesian:
+        bayes_df = train.join(train_fea)
+        bayes_df.set_index("SalesID", inplace=True, verify_integrity=True)
+        del bayes_df["saledate"]
+        header = []
+        for col in bayes_df.columns:
+            header.append("{0}:{1}".format(col, "string"))
+        data = []
+        for ix, row in bayes_df.iterrows():
+            r = []
+            for val in row.values:
+                r.append(str(val))
+            data.append(",".join(r))
+        f = open('train_bayesian.csv', 'w')
+        f.write(",".join(header)+"\n")
+        f.write("\n".join(data))
+        f.close()
     columns = set(train.columns)
 #    columns.remove("SalesID")
 #    columns.remove("SalePrice") 
@@ -309,7 +327,7 @@ def random_forest_cross_validate(targets, features):
     results = []
     for i, (traincv, testcv) in enumerate(cv):
         cfr = RandomForestClassifier(
-            n_estimators=300,
+            n_estimators=100,
             max_features=None,
             verbose=2,
             compute_importances=True,
@@ -352,7 +370,9 @@ if __name__ == '__main__':
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":
-        prepare_train_features(data_prefix, sample_size)
+        prepare_test_features(data_prefix)
+    if kind == "write_bayesian":
+        prepare_train_features(data_prefix, sample_size, True)
     if kind == "fix_train_features":
         train_df = pd.read_csv("train.csv", index_col=0)
         train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 

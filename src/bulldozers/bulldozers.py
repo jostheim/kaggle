@@ -320,7 +320,7 @@ def get_metric(cfr, features, targets):
     return mean_diff
 
 
-def random_forest_cross_validate(targets, features):
+def random_forest_cross_validate(targets, features, nprocesses=-1):
     cv = cross_validation.KFold(len(features), k=5, indices=False)
     #iterate through the training and test cross validation segments and
     #run the classifier on each one, aggregating the results into a list
@@ -331,7 +331,7 @@ def random_forest_cross_validate(targets, features):
             max_features=None,
             verbose=2,
             compute_importances=True,
-            n_jobs=8,
+            n_jobs=nprocesses,
             random_state=0,
         )
         print "Fitting cross validation #{0}".format(i)
@@ -367,6 +367,9 @@ if __name__ == '__main__':
     sample_size = None
     if len(sys.argv) > 2:
         sample_size = int(sys.argv[2])
+    nprocesses = 8
+    if len(sys.argv) > 3:
+        nprocesses = int(sys.argv[3])
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":
@@ -387,7 +390,7 @@ if __name__ == '__main__':
         features = train_df.ix[targets.index]
         del features['SalePrice']
         print "Doing cross validation with {0} features and {1} targets ".format(len(features), len(targets))
-        random_forest_cross_validate(targets, features)
+        random_forest_cross_validate(targets, features, nprocesses)
     
         
     

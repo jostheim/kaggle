@@ -116,7 +116,7 @@ def flatten_data_at_same_auction(df):
                 else:
                     flattened_df.append(tmp_df)
         i += 1
-        print "{0}/{1}, len(flattened):{2}".format(i, len(unique_sales_dates), len(flattened_df))
+        print "{0}/{1}".format(i, len(unique_sales_dates))
     if flattened_df is not None and len(flattened_df) > 1:
 #        flattened_df = pd.DataFrame(flattened_df)
 #        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)

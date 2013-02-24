@@ -84,12 +84,13 @@ def flatten_data_at_same_auction(df):
     unique_sales_dates = np.unique(df['saledate'])
     for col, series in new_df.iteritems():
         new_df[col] = series.apply(lambda x: replace_nan_with_random(x))
-    flattened_df = []
+    flattened_df = None
     for sale_date in unique_sales_dates:
         per_sale_df = new_df[new_df['saledate'] == sale_date]
         unique_states = np.unique(per_sale_df['state'])
         for state in unique_states:
             per_sale_per_state_df = per_sale_df[per_sale_df['state'] == state]
+            rows = []
             for k, (ix, row) in enumerate(per_sale_per_state_df.iterrows()):
                 cosines = cosine_similarity(per_sale_per_state_df, row)
                 cosines_t = []
@@ -104,15 +105,21 @@ def flatten_data_at_same_auction(df):
                     if ix_1 != ix:
                         for col, val in row_1.iteritems():
                             d["{0}_{1}".format(kk, col)] = val 
-#                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
                 if len(d.keys()) > 1:
-                    flattened_df.append(d)
+                    rows.append(d)
                 print "inner: {0}/{1}".format(k, len(per_sale_df))
+            if len(rows) > 1:
+                tmp_df = pd.DataFrame(rows)
+                tmp_df.set_index('SalesID', inplace=True, verify_integrity=True)
+                if flattened_df is None:
+                    flattened_df = tmp_df
+                else:
+                    flattened_df.append(tmp_df)
         i += 1
         print "{0}/{1}, len(flattened):{2}".format(i, len(unique_sales_dates), len(flattened_df))
     if flattened_df is not None and len(flattened_df) > 1:
-        flattened_df = pd.DataFrame(flattened_df)
-        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
+#        flattened_df = pd.DataFrame(flattened_df)
+#        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
         print "joining flattened", new_df
         new_df = new_df.join(flattened_df)
     return new_df

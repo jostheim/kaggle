@@ -17,6 +17,7 @@ from sklearn.metrics.pairwise import check_pairwise_arrays
 from sklearn.metrics.pairwise import linear_kernel
 from sklearn.preprocessing import normalize
 from sklearn.utils.extmath import safe_sparse_dot
+import csv
 
 
 
@@ -75,6 +76,46 @@ def parse_date_time(val):
     else:
         return np.nan
 #        return datetime.strptime(val, "%Y-%m-%dT%H:%M:%S")
+
+def flatten_data_at_same_auction(df):
+    i = 0
+    new_df = df.copy(True)
+    new_df.set_index('SalesID', inplace=True, verify_integrity=True)
+    unique_sales_dates = np.unique(df['saledate'])
+    for col, series in new_df.iteritems():
+        new_df[col] = series.apply(lambda x: replace_nan_with_random(x))
+    flattened_df = []
+    for sale_date in unique_sales_dates:
+        per_sale_df = new_df[new_df['saledate'] == sale_date]
+        unique_states = np.unique(per_sale_df['state'])
+        for state in unique_states:
+            per_sale_per_state_df = per_sale_df[per_sale_df['state'] == state]
+            for k, (ix, row) in enumerate(per_sale_per_state_df.iterrows()):
+                cosines = cosine_similarity(per_sale_per_state_df, row)
+                cosines_t = []
+                for cosine in cosines:
+                    cosines_t.append(cosine[0])
+                series = pd.Series(np.array(cosines_t), index=per_sale_per_state_df.index, name="similarity")
+                per_sale_per_state_df_copy = per_sale_per_state_df.copy(True)
+                per_sale_per_state_df_copy['similarity'] = series
+                per_sale_per_state_df_copy = per_sale_per_state_df_copy.sort_index(by='similarity', ascending=False)
+                d = {"SalesID":ix}
+                for kk, (ix_1, row_1) in enumerate(per_sale_per_state_df_copy.iterrows()):
+                    if ix_1 != ix:
+                        for col, val in row_1.iteritems():
+                            d["{0}_{1}".format(kk, col)] = val 
+#                t_df.set_index('SalesID', inplace=True, verify_integrity=True)
+                if len(d.keys()) > 1:
+                    flattened_df.append(d)
+                print "inner: {0}/{1}".format(k, len(per_sale_df))
+        i += 1
+        print "{0}/{1}, len(flattened):{2}".format(i, len(unique_sales_dates), len(flattened_df))
+    if flattened_df is not None and len(flattened_df) > 1:
+        flattened_df = pd.DataFrame(flattened_df)
+        flattened_df.set_index('SalesID', inplace=True, verify_integrity=True)
+        print "joining flattened", new_df
+        new_df = new_df.join(flattened_df)
+    return new_df
 
 def flatten(grouped, column_to_flatten, column_to_sort_flattening=None, index_to_ignore=None, max_number_to_flatten=None, prefix=""):
     groups = []
@@ -161,7 +202,7 @@ def get_related_rows_proxy(args):
     return ret
 
 def replace_nan_with_random(x):
-    if str(x).strip() == 'nan' or x is np.nan:
+    if str(x).lower().strip() == 'nan' or x is np.nan:
         return random.uniform(0, 1.0)
     else:
         return x
@@ -277,30 +318,29 @@ def prepare_train_features(data_prefix, sample_size = None, output_bayesian=Fals
             header.append("{0}:{1}".format(col, "string"))
         data = []
         for ix, row in bayes_df.iterrows():
-            r = []
-            for val in row.values:
-                r.append(str(val))
-            data.append(",".join(r))
-        f = open('train_bayesian.csv', 'w')
-        f.write(",".join(header)+"\n")
-        f.write("\n".join(data))
-        f.close()
+            data.append(row)
+        csv_writer = csv.writer(open('train_bayesian.csv', 'w'))
+        csv_writer.writerow(header)
+        csv_writer.writerows(data)
+        csv_writer.close()
+        return
     columns = set(train.columns)
 #    columns.remove("SalesID")
 #    columns.remove("SalePrice") 
-    columns.remove("saledate")
+#    columns.remove("saledate")
     train_fea, test_fea = convert_categorical_to_features(train, test, columns, train_fea, test_fea)
-    train_fea.set_index("SalesID", inplace=True, verify_integrity=True)
+#    train_fea.set_index("SalesID", inplace=True, verify_integrity=True)
     # gotta put nan's back
     for col, series in train_fea.iteritems():
         train_fea[col] = series.apply(lambda x: replace_string_nan(x))
-    joiner = get_all_related_rows_as_features(train_fea.copy(True))
-    train_fea = train_fea.join(joiner)
+    train_fea = flatten_data_at_same_auction(train_fea)
+#    joiner = get_all_related_rows_as_features(train_fea.copy(True))
+#    train_fea = train_fea.join(joiner)
     train_fea.to_csv("train.csv")
     return train_fea
 
 def replace_string_nan(x):
-    if str(x).strip() == "nan" or x is np.nan:
+    if str(x).lower().strip() == "nan" or x is np.nan:
         return np.nan
     else:
         return x
@@ -373,7 +413,7 @@ if __name__ == '__main__':
     if kind == "prepare_test_features":
         prepare_test_features(data_prefix)
     if kind == "prepare_train_features":
-        prepare_test_features(data_prefix)
+        prepare_train_features(data_prefix)
     if kind == "write_bayesian":
         prepare_train_features(data_prefix, sample_size, True)
     if kind == "fix_train_features":

@@ -280,7 +280,7 @@ def prepare_test_features(data_prefix):
 
 def prepare_train_features(data_prefix, sample_size = None, output_bayesian=False):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
-                        converters={"saledate": dateutil.parser.parse})
+                        converters={"saledate": dateutil.parser.parse}, nrows=1000)
     if sample_size is not None:
         train = sample(train, sample_size)
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  

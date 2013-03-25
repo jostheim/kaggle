@@ -244,6 +244,15 @@ def get_all_related_rows_as_features(fea):
     pool.terminate()
     return all_df
 
+def set_season(date):
+    if date.month in [9,10,11]:
+        return 'fall'
+    elif date.month in [12, 1, 2]:
+        return 'winter'
+    elif date.month in [3, 4, 5]:
+        return 'spring'
+    elif date.month in [6, 7, 8]:
+        return 'winter'
 
 def prepare_test_features(data_prefix):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
@@ -266,6 +275,8 @@ def prepare_test_features(data_prefix):
     test.fillna("NaN", inplace=True)
     test_fea = get_date_dataframe(test["saledate"])
     train_fea = get_date_dataframe(train["saledate"])
+    test_fea['season'] = test_fea['saledate'].apply(lambda x: set_season(x))
+    train_fea['season'] = train_fea['saledate'].apply(lambda x: set_season(x))
     columns = set(train.columns)
 #    columns.remove("SalesID")
 #    columns.remove("SalePrice")
@@ -281,6 +292,8 @@ def prepare_test_features(data_prefix):
 def prepare_train_features(data_prefix, sample_size = None, output_bayesian=False):
     train = pd.read_csv("{0}{1}".format(data_prefix, "Train.csv"), 
                         converters={"saledate": dateutil.parser.parse})
+    print np.max(train['SalePrice'])
+    print np.min(train['SalePrice'])
     if sample_size is not None:
         train = sample(train, sample_size)
     test = pd.read_csv("{0}{1}".format(data_prefix, "Valid.csv"),  
@@ -339,7 +352,7 @@ def prepare_train_features(data_prefix, sample_size = None, output_bayesian=Fals
     # gotta put nan's back
     for col, series in train_fea.iteritems():
         train_fea[col] = series.apply(lambda x: replace_string_nan(x))
-    train_fea = flatten_data_at_same_auction(train_fea)
+#    train_fea = flatten_data_at_same_auction(train_fea)
 #    joiner = get_all_related_rows_as_features(train_fea.copy(True))
 #    train_fea = train_fea.join(joiner)
     train_fea.to_csv("train.csv")
@@ -436,7 +449,7 @@ if __name__ == '__main__':
         features = train_df.ix[targets.index]
         del features['SalePrice']
         print "Doing cross validation with {0} features and {1} targets ".format(len(features), len(targets))
-        random_forest_cross_validate(targets, features, nprocesses)
+        random_forest_cross_validate(targets, features, 1)
     
         
     

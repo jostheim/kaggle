@@ -443,7 +443,7 @@ if __name__ == '__main__':
         train_df.to_csv("train.csv")
     if kind == "cross_validate":
         train_df = pd.read_csv("train.csv", index_col=0)
-        if sample_size is not None:
+        if sample_size is not None and sample_size > 0:
             train_df = sample(train_df, sample_size)
         targets = train_df['SalePrice'].dropna()
         features = train_df.ix[targets.index]

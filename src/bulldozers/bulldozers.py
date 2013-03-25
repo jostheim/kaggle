@@ -449,7 +449,7 @@ if __name__ == '__main__':
         features = train_df.ix[targets.index]
         del features['SalePrice']
         print "Doing cross validation with {0} features and {1} targets ".format(len(features), len(targets))
-        random_forest_cross_validate(targets, features, 1)
+        random_forest_cross_validate(targets, features, nprocesses)
     
         
     

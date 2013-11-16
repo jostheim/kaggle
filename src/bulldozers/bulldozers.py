@@ -10,7 +10,7 @@ import random
 import pickle
 import pytz
 from pytz import timezone
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import cross_validation
 import traceback
 from sklearn.metrics.pairwise import check_pairwise_arrays
@@ -385,7 +385,7 @@ def random_forest_cross_validate(targets, features, nprocesses=-1):
     #run the classifier on each one, aggregating the results into a list
     results = []
     for i, (traincv, testcv) in enumerate(cv):
-        cfr = RandomForestClassifier(
+        cfr = ExtraTreesClassifier(
             n_estimators=100,
             max_features=None,
             verbose=2,

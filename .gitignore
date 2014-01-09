@@ -3,3 +3,4 @@ data/*
 *.pyc
 *.tar
 *.tar.gz
+nohup.out

@@ -4,3 +4,4 @@ data/*
 *.tar
 *.tar.gz
 nohup.out
+*.csv

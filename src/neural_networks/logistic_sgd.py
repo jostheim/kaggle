@@ -100,7 +100,8 @@ class LogisticRegression(object):
         # x is a matrix where row-j  represents input training sample-j
         # b is a vector where element-k represent the free parameter of
         # hyperplane-k
-        self.p_y_given_x = T.nnet.softmax(T.dot(input, self.W) + self.b)
+        # self.p_y_given_x = T.nnet.softmax(T.dot(input, self.W) + self.b)
+        self.p_y_given_x = T.dot(input, self.W) + self.b
 
         # symbolic description of how to compute prediction as class whose
         # probability is maximal
@@ -144,6 +145,10 @@ class LogisticRegression(object):
         # i.e., the mean log-likelihood across the minibatch.
         return -T.mean(T.log(self.p_y_given_x)[T.arange(y.shape[0]), y])
         # end-snippet-2
+
+    def mse(self, y):
+        # error between output and target
+        return T.mean((self.y_pred - y) ** 2)
 
     def errors(self, y):
         """Return a float representing the number of errors in the minibatch

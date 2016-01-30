@@ -12,7 +12,8 @@ from tqdm import *
 from datetime import datetime
 import pytz
 import random
-root_url = "https://api.fanduel.com/"
+
+root_url = "https://api.fanduel.com"
 driver = None
 
 
@@ -42,9 +43,20 @@ def get_x_auth_token():
 
 
 def get_api_credentials(username, password):
-    login(username, password)
-    api_client_id = get_api_client_id()
-    auth_token = get_x_auth_token()
+    api_client_id = None
+    auth_token = None
+    while api_client_id is None or auth_token is None:
+        try:
+            login(username, password)
+            api_client_id = get_api_client_id()
+            auth_token = get_x_auth_token()
+
+        except Exception as e:
+            print e
+        if api_client_id is not None and auth_token is not None:
+            break
+        else:
+            time.sleep(600)
     return api_client_id, auth_token
 
 
@@ -67,13 +79,13 @@ def get_contest(contest_id, api_client_id, auth_token):
 # contest_timing_id lokes like 14446
 def get_players(contest_timing_id, api_client_id, auth_token):
     headers = {'X-Auth-Token': auth_token, "Authorization": 'Basic {0}'.format(api_client_id)}
-    response1 = requests.get('{0}/fixture-lists/contest_id/players'.format(root_url, contest_timing_id), headers=headers)
+    response1 = requests.get('{0}/fixture-lists/{1}/players'.format(root_url, contest_timing_id), headers=headers)
     return response1.json()
 
 
 def get_fixtures(contest_timing_id, api_client_id, auth_token):
     headers = {'X-Auth-Token': auth_token, "Authorization": 'Basic {0}'.format(api_client_id)}
-    response1 = requests.get('{0}/fixture-lists/contest_id'.format(root_url, contest_timing_id), headers=headers)
+    response1 = requests.get('{0}/fixture-lists/{{1}}'.format(root_url, contest_timing_id), headers=headers)
     return response1.json()
 
 
@@ -101,6 +113,18 @@ def process_contests():
                 r.set('fanduel::final::{0}'.format(contest_id), contest_details['fixture_lists'][0]['start_date'])
 
 
+def fix_contests():
+    api_client_id, auth_token = get_api_credentials("james.ostheimer@gmail.com", 'Rlaaooc1')
+    for key in tqdm(r.keys("fanduel::contest::*")):
+        contest_id = key.split("::")[2]
+        contest_timing_id = contest_id.split("-")[0]
+        if 'error' in json.loads(r.get("fanduel::contest::{0}".format(key))):
+            players = get_players(contest_timing_id, api_client_id, auth_token)
+            fixtures = get_fixtures(contest_timing_id, api_client_id, auth_token)
+            r.set('fanduel::contest::players::{0}'.format(contest_id), json.dumps(players))
+            r.set('fanduel::contest::fixtures::{0}'.format(contest_id), json.dumps(fixtures))
+
+
 def check_on_contests():
     api_client_id, auth_token = get_api_credentials("james.ostheimer@gmail.com", 'Rlaaooc1')
     logging.info("Checking status of {0} contests".format(len(r.keys("fanduel::final::*"))))
@@ -109,14 +133,16 @@ def check_on_contests():
         contest_id = key.split("::")[2]
         start_date = dateutil.parser.parse(r.get(key))
         # be a good steward and don't call unless we are 8 hours after the start date
-        time_diff = datetime.utcnow().replace(tzinfo = pytz.utc) - start_date
-        if time_diff.total_seconds() > 8*60*60:
+        time_diff = datetime.utcnow().replace(tzinfo=pytz.utc) - start_date
+        if time_diff.total_seconds() > 8 * 60 * 60:
             contest_details = get_contest(contest_id, api_client_id, auth_token)
+            if 'fixture_lists' not in contest_details:
+                continue
             contest_status_final = contest_details['fixture_lists'][0]['status']['final']
             # contest is final, store the contest data, players and fixtures
             if contest_status_final:
                 number_final += 1
-                contest_timing_id = contest_id.split("_")[0]
+                contest_timing_id = contest_id.split("-")[0]
                 players = get_players(contest_timing_id, api_client_id, auth_token)
                 fixtures = get_fixtures(contest_timing_id, api_client_id, auth_token)
                 r.set('fanduel::contest::{0}'.format(contest_id), json.dumps(contest_details))
@@ -143,8 +169,10 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     init_driver()
     r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    # runs through all the contests and gets players and fixtures without regard to how old or anything
+    # fix_contests()
     while 1:
         logging.info("Running a run")
         process_contests()
         check_on_contests()
-        time.sleep(random.normalvariate(45.*60, 5*60))
+        time.sleep(random.normalvariate(45. * 60, 5 * 60))
